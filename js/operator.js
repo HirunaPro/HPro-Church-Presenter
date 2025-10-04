@@ -23,6 +23,13 @@ const phrasesSection = document.getElementById('phrasesSection');
 const currentDisplay = document.getElementById('currentDisplay');
 const bibleVerseInput = document.getElementById('bibleVerse');
 const showBibleVerseBtn = document.getElementById('showBibleVerse');
+const addSongsBtn = document.getElementById('addSongsBtn');
+const bulkImportModal = document.getElementById('bulkImportModal');
+const closeModal = document.getElementById('closeModal');
+const cancelImport = document.getElementById('cancelImport');
+const importSongs = document.getElementById('importSongs');
+const bulkSongInput = document.getElementById('bulkSongInput');
+const importStatus = document.getElementById('importStatus');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -317,4 +324,154 @@ function setupEventListeners() {
             });
         }
     });
+    
+    // Bulk import modal handlers
+    addSongsBtn.addEventListener('click', () => {
+        bulkImportModal.classList.add('show');
+        bulkSongInput.value = '';
+        importStatus.className = 'import-status';
+        importStatus.textContent = '';
+    });
+    
+    closeModal.addEventListener('click', () => {
+        bulkImportModal.classList.remove('show');
+    });
+    
+    cancelImport.addEventListener('click', () => {
+        bulkImportModal.classList.remove('show');
+    });
+    
+    // Close modal when clicking outside
+    bulkImportModal.addEventListener('click', (e) => {
+        if (e.target === bulkImportModal) {
+            bulkImportModal.classList.remove('show');
+        }
+    });
+    
+    // Import songs button
+    importSongs.addEventListener('click', async () => {
+        const input = bulkSongInput.value.trim();
+        if (!input) {
+            showImportStatus('Please paste some songs to import.', 'error');
+            return;
+        }
+        
+        try {
+            const songs = parseBulkSongs(input);
+            if (songs.length === 0) {
+                showImportStatus('No valid songs found. Please check the format.', 'error');
+                return;
+            }
+            
+            showImportStatus(`Processing ${songs.length} song(s)...`, 'info');
+            
+            // Save songs to server
+            const result = await saveSongs(songs);
+            
+            if (result.success) {
+                showImportStatus(
+                    `Successfully imported ${result.saved} song(s)!${result.skipped > 0 ? ` (${result.skipped} skipped - already exist)` : ''}`,
+                    'success'
+                );
+                
+                // Reload songs after a short delay
+                setTimeout(() => {
+                    loadSongs();
+                    bulkImportModal.classList.remove('show');
+                }, 2000);
+            } else {
+                showImportStatus(`Error: ${result.message}`, 'error');
+            }
+            
+        } catch (error) {
+            showImportStatus(`Error: ${error.message}`, 'error');
+        }
+    });
+}
+
+// Parse bulk song input into structured song objects
+function parseBulkSongs(input) {
+    const songs = [];
+    
+    // Split input into lines
+    const allLines = input.split('\n');
+    
+    let currentSong = null;
+    let currentVerse = [];
+    let blankLineCount = 0;
+    
+    for (let i = 0; i < allLines.length; i++) {
+        const line = allLines[i].trim();
+        
+        if (line === '') {
+            blankLineCount++;
+            
+            // If we have a current verse, save it
+            if (currentVerse.length > 0 && currentSong) {
+                currentSong.phrases.push([...currentVerse]);
+                currentVerse = [];
+            }
+            
+            // Two or more blank lines in a row = new song
+            if (blankLineCount >= 2 && currentSong) {
+                // Save the current song
+                if (currentSong.phrases.length > 0) {
+                    songs.push(currentSong);
+                }
+                currentSong = null;
+            }
+        } else {
+            blankLineCount = 0;
+            
+            // Check if this is a new song (no current song and we have a line)
+            if (!currentSong) {
+                currentSong = {
+                    title: line,
+                    phrases: []
+                };
+            } else {
+                // This is a lyric line
+                currentVerse.push(line);
+            }
+        }
+    }
+    
+    // Don't forget the last verse and song
+    if (currentVerse.length > 0 && currentSong) {
+        currentSong.phrases.push(currentVerse);
+    }
+    if (currentSong && currentSong.phrases.length > 0) {
+        songs.push(currentSong);
+    }
+    
+    return songs;
+}
+
+// Save songs to the server
+async function saveSongs(songs) {
+    try {
+        const response = await fetch('/api/save-songs', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ songs: songs })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+        
+        return await response.json();
+        
+    } catch (error) {
+        console.error('Error saving songs:', error);
+        throw error;
+    }
+}
+
+// Show import status message
+function showImportStatus(message, type) {
+    importStatus.textContent = message;
+    importStatus.className = `import-status ${type}`;
 }

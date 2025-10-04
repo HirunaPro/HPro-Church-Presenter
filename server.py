@@ -48,6 +48,88 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
     
+    def do_POST(self):
+        """Handle POST requests"""
+        if self.path == '/api/save-songs':
+            self.handle_save_songs()
+        else:
+            self.send_error(404, "Endpoint not found")
+    
+    def handle_save_songs(self):
+        """Handle saving bulk songs"""
+        try:
+            # Read the request body
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            data = json.loads(post_data.decode('utf-8'))
+            
+            songs = data.get('songs', [])
+            saved_count = 0
+            skipped_count = 0
+            
+            # Create songs directory if it doesn't exist
+            songs_dir = Path('songs')
+            songs_dir.mkdir(exist_ok=True)
+            
+            for song in songs:
+                # Generate filename from title
+                filename = self.generate_filename(song['title'])
+                filepath = songs_dir / filename
+                
+                # Skip if file already exists
+                if filepath.exists():
+                    print(f"[HTTP] Song '{song['title']}' already exists, skipping")
+                    skipped_count += 1
+                    continue
+                
+                # Save the song
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    json.dump(song, f, indent=2, ensure_ascii=False)
+                
+                print(f"[HTTP] Saved song: {filename}")
+                saved_count += 1
+            
+            # Send response
+            response = {
+                'success': True,
+                'saved': saved_count,
+                'skipped': skipped_count,
+                'total': len(songs)
+            }
+            
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response).encode('utf-8'))
+            
+        except Exception as e:
+            print(f"[HTTP] Error saving songs: {e}")
+            error_response = {
+                'success': False,
+                'message': str(e)
+            }
+            
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
+    
+    def generate_filename(self, title):
+        """Generate a filename from song title"""
+        # Convert to lowercase
+        filename = title.lower()
+        # Replace spaces and special characters with hyphens
+        filename = ''.join(c if c.isalnum() or c in ' -' else '' for c in filename)
+        filename = filename.replace(' ', '-')
+        # Remove multiple consecutive hyphens
+        while '--' in filename:
+            filename = filename.replace('--', '-')
+        # Remove leading/trailing hyphens
+        filename = filename.strip('-')
+        # Add .json extension
+        filename = f"{filename}.json"
+        return filename
+    
     def log_message(self, format, *args):
         # Custom logging
         print(f"[HTTP] {self.address_string()} - {format % args}")
