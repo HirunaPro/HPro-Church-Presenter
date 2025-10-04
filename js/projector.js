@@ -66,6 +66,14 @@ function initWebSocket() {
 
 // Update the display with new content
 function updateDisplay(content) {
+    // Handle welcome screen
+    if (content.type === 'welcome_screen') {
+        // Load the welcome page in an iframe
+        projectorContent.innerHTML = `<iframe src="welcome.html" style="width: 100%; height: 100vh; border: none; position: fixed; top: 0; left: 0; z-index: 9999;"></iframe>`;
+        churchLogo.style.display = 'none';
+        return;
+    }
+    
     // Update font size
     projectorContent.className = 'projector-content';
     if (content.fontSize) {

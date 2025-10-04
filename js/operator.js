@@ -30,6 +30,7 @@ const cancelImport = document.getElementById('cancelImport');
 const importSongs = document.getElementById('importSongs');
 const bulkSongInput = document.getElementById('bulkSongInput');
 const importStatus = document.getElementById('importStatus');
+const showWelcomeScreenBtn = document.getElementById('showWelcomeScreen');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -323,6 +324,19 @@ function setupEventListeners() {
                 p.classList.remove('active');
             });
         }
+    });
+    
+    // Welcome screen button
+    showWelcomeScreenBtn.addEventListener('click', () => {
+        sendToProjector({
+            type: 'welcome_screen',
+            text: 'Welcome Screen'
+        });
+        
+        // Clear active phrase
+        document.querySelectorAll('.phrase-item').forEach(p => {
+            p.classList.remove('active');
+        });
     });
     
     // Bulk import modal handlers
