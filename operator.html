@@ -22,6 +22,7 @@
                     id="songSearch" 
                     placeholder="Search songs by title..."
                 >
+                <button class="add-songs-btn" id="addSongsBtn">+ Add Songs</button>
             </div>
             
             <div class="song-list" id="songList">
@@ -85,6 +86,49 @@
                     <h2>No Song Selected</h2>
                     <p>Select a song from the list to view and display its phrases</p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Song Import Modal -->
+    <div id="bulkImportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Multiple Songs</h2>
+                <span class="close-modal" id="closeModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p class="modal-instructions">
+                    Paste multiple songs below. Each song should be separated by a blank line, and each verse should be separated by a blank line within the song.
+                    The first line of each song will be used as the title.
+                </p>
+                <div class="modal-example">
+                    <strong>Example Format:</strong>
+                    <pre>Amazing Grace
+
+Amazing grace how sweet the sound
+That saved a wretch like me
+I once was lost but now am found
+Was blind but now I see
+
+'Twas grace that taught my heart to fear
+And grace my fears relieved
+
+Blessed Assurance
+
+Blessed assurance, Jesus is mine
+O what a foretaste of glory divine</pre>
+                </div>
+                <textarea 
+                    id="bulkSongInput" 
+                    class="bulk-song-textarea" 
+                    placeholder="Paste your songs here..."
+                ></textarea>
+                <div class="modal-footer">
+                    <button class="modal-btn cancel-btn" id="cancelImport">Cancel</button>
+                    <button class="modal-btn import-btn" id="importSongs">Import Songs</button>
+                </div>
+                <div id="importStatus" class="import-status"></div>
             </div>
         </div>
     </div>
