@@ -52,10 +52,28 @@ try {
     if (-not $account) {
         Write-Host "Please login to Azure..." -ForegroundColor Yellow
         az login
-        $account = az account show | ConvertFrom-Json
     }
+    
+    # List available subscriptions
+    Write-Host ""
+    Write-Host "Available subscriptions:" -ForegroundColor Cyan
+    $subscriptions = az account list --query "[].{Name:name, ID:id, Default:isDefault}" -o table
+    Write-Host $subscriptions
+    Write-Host ""
+    
+    # Prompt for subscription selection
+    $subscriptionId = Read-Host "Enter the Subscription ID you want to use (or press Enter to use default)"
+    
+    if (-not [string]::IsNullOrWhiteSpace($subscriptionId)) {
+        Write-Host "Setting subscription to: $subscriptionId" -ForegroundColor Cyan
+        az account set --subscription $subscriptionId
+    }
+    
+    # Get current account info
+    $account = az account show | ConvertFrom-Json
     Write-Host "✅ Logged in to Azure" -ForegroundColor Green
-    Write-Host "   Subscription: $($account.name)" -ForegroundColor Gray
+    Write-Host "   Active Subscription: $($account.name)" -ForegroundColor Gray
+    Write-Host "   Tenant ID: $($account.tenantId)" -ForegroundColor Gray
 } catch {
     Write-Host "❌ Failed to login to Azure" -ForegroundColor Red
     exit 1

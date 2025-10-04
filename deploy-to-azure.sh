@@ -56,9 +56,26 @@ if ! az account show &> /dev/null; then
     az login
 fi
 
+# List available subscriptions
+echo ""
+echo "Available subscriptions:"
+az account list --query "[].{Name:name, ID:id, Default:isDefault}" -o table
+echo ""
+
+# Prompt for subscription selection
+read -p "Enter the Subscription ID you want to use (or press Enter to use default): " SUBSCRIPTION_ID
+
+if [ -n "$SUBSCRIPTION_ID" ]; then
+    echo "Setting subscription to: $SUBSCRIPTION_ID"
+    az account set --subscription "$SUBSCRIPTION_ID"
+fi
+
+# Get current subscription info
 echo "✅ Logged in to Azure"
 SUBSCRIPTION=$(az account show --query name -o tsv)
-echo "   Subscription: $SUBSCRIPTION"
+TENANT_ID=$(az account show --query tenantId -o tsv)
+echo "   Active Subscription: $SUBSCRIPTION"
+echo "   Tenant ID: $TENANT_ID"
 echo ""
 
 # Create resource group

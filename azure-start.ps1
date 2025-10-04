@@ -58,10 +58,28 @@ try {
         Write-Warning-Custom "Not logged in to Azure"
         Write-Info "Logging in..."
         az login
-        $account = az account show | ConvertFrom-Json
     }
+    
+    # List available subscriptions
+    Write-Host ""
+    Write-Info "Available subscriptions:"
+    $subscriptions = az account list --query "[].{Name:name, ID:id, Default:isDefault}" -o table
+    Write-Host $subscriptions
+    Write-Host ""
+    
+    # Prompt for subscription selection
+    $subscriptionId = Read-Host "Enter the Subscription ID you want to use (or press Enter to use default)"
+    
+    if (-not [string]::IsNullOrWhiteSpace($subscriptionId)) {
+        Write-Info "Setting subscription to: $subscriptionId"
+        az account set --subscription $subscriptionId
+    }
+    
+    # Get current account info
+    $account = az account show | ConvertFrom-Json
     Write-Success "Logged in to Azure"
-    Write-Info "Subscription: $($account.name)"
+    Write-Info "Active Subscription: $($account.name)"
+    Write-Info "Tenant ID: $($account.tenantId)"
 } catch {
     Write-Error-Custom "Failed to login to Azure"
     exit 1
