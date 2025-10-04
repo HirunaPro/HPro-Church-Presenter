@@ -1,0 +1,35 @@
+<svg width="150" height="150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="75" cy="75" r="70" fill="#667eea" stroke="#4a5bb8" stroke-width="3"/>
+  
+  <!-- Church building -->
+  <g>
+    <!-- Main building body -->
+    <rect x="40" y="80" width="70" height="50" fill="white" stroke="#333" stroke-width="2"/>
+    
+    <!-- Roof -->
+    <polygon points="35,80 75,50 115,80" fill="white" stroke="#333" stroke-width="2"/>
+    
+    <!-- Steeple base -->
+    <rect x="65" y="45" width="20" height="35" fill="white" stroke="#333" stroke-width="2"/>
+    
+    <!-- Steeple roof -->
+    <polygon points="63,45 75,30 87,45" fill="white" stroke="#333" stroke-width="2"/>
+    
+    <!-- Cross -->
+    <line x1="75" y1="20" x2="75" y2="35" stroke="white" stroke-width="3"/>
+    <line x1="69" y1="25" x2="81" y2="25" stroke="white" stroke-width="3"/>
+    
+    <!-- Door -->
+    <rect x="65" y="105" width="20" height="25" fill="#667eea" stroke="#333" stroke-width="2"/>
+    
+    <!-- Windows -->
+    <rect x="48" y="90" width="12" height="15" fill="#87ceeb" stroke="#333" stroke-width="1"/>
+    <rect x="90" y="90" width="12" height="15" fill="#87ceeb" stroke="#333" stroke-width="1"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="75" y="145" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle" font-weight="bold">
+    CHURCH
+  </text>
+</svg>

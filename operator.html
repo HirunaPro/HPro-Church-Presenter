@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operator Control - Church Presentation</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="operator-container">
+        <!-- Sidebar with Song List -->
+        <div class="operator-sidebar">
+            <div class="operator-header">
+                <h1>Song Library</h1>
+                <span class="connection-status disconnected" id="connectionStatus">Disconnected</span>
+            </div>
+            
+            <div class="search-section">
+                <input 
+                    type="text" 
+                    class="search-input" 
+                    id="songSearch" 
+                    placeholder="Search songs by title..."
+                >
+            </div>
+            
+            <div class="song-list" id="songList">
+                <p style="text-align: center; color: #999; padding: 20px;">
+                    Loading songs...
+                </p>
+            </div>
+        </div>
+        
+        <!-- Main Control Area -->
+        <div class="operator-main">
+            <div class="control-panel">
+                <!-- Font Size Controls -->
+                <div class="control-section">
+                    <h3>Font Size</h3>
+                    <div class="button-group">
+                        <button class="control-button" data-font="small">Small</button>
+                        <button class="control-button active" data-font="medium">Medium</button>
+                        <button class="control-button" data-font="large">Large</button>
+                        <button class="control-button" data-font="extra-large">Extra Large</button>
+                    </div>
+                </div>
+                
+                <!-- Simple Slides -->
+                <div class="control-section">
+                    <h3>Simple Slides</h3>
+                    <div class="button-group">
+                        <button class="control-button slide-btn" data-slide="welcome">Welcome</button>
+                        <button class="control-button slide-btn" data-slide="sermon">Sermon in Progress</button>
+                        <button class="control-button slide-btn" data-slide="prayer">Prayer Time</button>
+                        <button class="control-button slide-btn" data-slide="announcements">Announcements</button>
+                        <button class="control-button blank-btn" data-slide="blank">Blank Screen</button>
+                    </div>
+                    
+                    <!-- Bible Verse Input -->
+                    <div style="margin-top: 15px;">
+                        <label for="bibleVerse" style="display: block; margin-bottom: 5px; font-weight: bold;">
+                            Bible Verse / Custom Text:
+                        </label>
+                        <textarea 
+                            class="bible-verse-input" 
+                            id="bibleVerse" 
+                            placeholder="Enter custom text or Bible verse here..."
+                        ></textarea>
+                        <button class="control-button slide-btn" id="showBibleVerse" style="margin-top: 10px;">
+                            Show Custom Text
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Current Display Indicator -->
+                <div class="current-display">
+                    <h4>Currently Displaying:</h4>
+                    <p id="currentDisplay">Welcome to Church</p>
+                </div>
+            </div>
+            
+            <!-- Phrases Section -->
+            <div class="phrases-section" id="phrasesSection">
+                <div class="no-song-selected">
+                    <h2>No Song Selected</h2>
+                    <p>Select a song from the list to view and display its phrases</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/operator.js"></script>
+</body>
+</html>

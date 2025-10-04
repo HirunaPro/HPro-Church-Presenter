@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projector Display - Church Presentation</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="projector-container" id="projectorContainer">
+        <img 
+            src="images/church-logo.png" 
+            alt="Church Logo" 
+            class="church-logo" 
+            id="churchLogo"
+            onerror="this.style.display='none'"
+        >
+        
+        <div class="projector-content font-medium" id="projectorContent">
+            Welcome to Our Church
+        </div>
+    </div>
+
+    <div class="fullscreen-hint" id="fullscreenHint">
+        Press F11 for full-screen mode
+    </div>
+
+    <script src="js/projector.js"></script>
+</body>
+</html>
