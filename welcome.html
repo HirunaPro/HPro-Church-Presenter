@@ -15,7 +15,7 @@
             font-family: 'Noto Sans Sinhala', Arial, sans-serif;
             overflow: hidden;
             height: 100vh;
-            background: linear-gradient(135deg, #000000 0%, #1a1a1a 25%, #FFD700 50%, #FFA500 75%, #000000 100%);
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #0a0a0a 100%);
             background-size: 400% 400%;
             animation: gradientShift 45s ease infinite;
         }
@@ -62,8 +62,8 @@
         .church-name {
             font-size: 4rem;
             font-weight: bold;
-            color: #FFD700;
-            text-shadow: 0 5px 15px rgba(255, 215, 0, 0.5), 0 0 30px rgba(255, 215, 0, 0.3);
+            color: #FFE066;
+            text-shadow: 0 5px 15px rgba(255, 224, 102, 0.7), 0 0 30px rgba(255, 224, 102, 0.5), 0 2px 5px rgba(0, 0, 0, 0.8);
             margin-bottom: 30px;
             animation: pulse 8s ease-in-out infinite;
         }
@@ -71,9 +71,42 @@
         .event-name {
             font-size: 3rem;
             font-weight: 600;
-            color: #FFA500;
-            text-shadow: 0 5px 15px rgba(255, 165, 0, 0.5), 0 0 30px rgba(255, 165, 0, 0.3);
+            color: #FFC966;
+            text-shadow: 0 5px 15px rgba(255, 201, 102, 0.7), 0 0 30px rgba(255, 201, 102, 0.5), 0 2px 5px rgba(0, 0, 0, 0.8);
+            margin-bottom: 25px;
             animation: glow 10s ease-in-out infinite alternate;
+        }
+
+        .year {
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: #FFE066;
+            text-shadow: 0 5px 15px rgba(255, 224, 102, 0.7), 0 0 30px rgba(255, 224, 102, 0.5), 0 2px 5px rgba(0, 0, 0, 0.8);
+            margin-bottom: 40px;
+            animation: pulse 8s ease-in-out infinite;
+        }
+
+        .verse-container {
+            max-width: 900px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .verse {
+            font-size: 1.8rem;
+            font-weight: 400;
+            color: #FFFFFF;
+            text-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+            line-height: 1.6;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .verse-reference {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: #FFE066;
+            text-shadow: 0 3px 10px rgba(255, 224, 102, 0.7), 0 2px 5px rgba(0, 0, 0, 0.8);
         }
 
         @keyframes fadeInDown {
@@ -109,10 +142,10 @@
 
         @keyframes glow {
             from {
-                text-shadow: 0 5px 15px rgba(255, 165, 0, 0.5), 0 0 30px rgba(255, 215, 0, 0.3);
+                text-shadow: 0 5px 15px rgba(255, 201, 102, 0.7), 0 0 30px rgba(255, 201, 102, 0.5), 0 2px 5px rgba(0, 0, 0, 0.8);
             }
             to {
-                text-shadow: 0 5px 15px rgba(255, 165, 0, 0.5), 0 0 50px rgba(255, 215, 0, 0.6), 0 0 70px rgba(255, 215, 0, 0.4);
+                text-shadow: 0 5px 15px rgba(255, 201, 102, 0.7), 0 0 50px rgba(255, 201, 102, 0.8), 0 0 70px rgba(255, 201, 102, 0.6), 0 2px 5px rgba(0, 0, 0, 0.8);
             }
         }
 
@@ -129,7 +162,7 @@
 
         .particle {
             position: absolute;
-            background: rgba(255, 215, 0, 0.6);
+            background: rgba(100, 150, 255, 0.4);
             border-radius: 50%;
             animation: rise linear infinite;
         }
@@ -250,7 +283,12 @@
         </div>
         <div class="text-container">
             <h1 class="church-name">සහනයට මග දේව සභාව</h1>
-            <h2 class="event-name">2025 කඳවුරු මංගල්‍ය</h2>
+            <h2 class="event-name">11 වන කඳවුරු මංගල්‍ය</h2>
+            <h3 class="year">2025</h3>
+            <div class="verse-container">
+                <p class="verse">"ඔහු තැළුණු බටලීයක් නොබිඳින්නේය, දුම්ගහන පහන්තිරයක් නොනිවන්නේය. ඔහු සැබෑවෙන් විනිශ්චය ප්‍රකාශකරන්නේය."</p>
+                <p class="verse-reference">යෙසායා 42:3</p>
+            </div>
         </div>
     </div>
 </body>

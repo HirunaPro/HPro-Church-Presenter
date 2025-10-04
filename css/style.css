@@ -288,7 +288,7 @@ body {
 }
 
 .current-display p {
-    color: #666;
+    color: #444;
     font-style: italic;
 }
 
@@ -328,7 +328,7 @@ body {
 
 .no-song-selected {
     text-align: center;
-    color: #999;
+    color: #555;
     padding: 50px 20px;
 }
 
@@ -516,7 +516,7 @@ body {
 .close-modal {
     font-size: 32px;
     font-weight: bold;
-    color: #999;
+    color: #666;
     cursor: pointer;
     line-height: 1;
     transition: color 0.2s;
@@ -533,7 +533,7 @@ body {
 .modal-instructions {
     margin-bottom: 15px;
     line-height: 1.6;
-    color: #555;
+    color: #333;
 }
 
 .modal-example {

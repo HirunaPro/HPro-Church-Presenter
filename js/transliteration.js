@@ -13,7 +13,7 @@ const Transliteration = {
         'ක': 'ka', 'ඛ': 'kha', 'ග': 'ga', 'ඝ': 'gha', 'ඞ': 'nga',
         'ච': 'cha', 'ඡ': 'chha', 'ජ': 'ja', 'ඣ': 'jha', 'ඤ': 'gna',
         'ට': 'ta', 'ඨ': 'tta', 'ඩ': 'da', 'ඪ': 'dda', 'ණ': 'na',
-        'ත': 'tha', 'ථ': 'thha', 'ද': 'dha', 'ධ': 'dhha', 'න': 'na',
+        'ත': 'tha', 'ථ': 'thha', 'ද': 'dha', 'ධ': 'dhha', 'න': 'na', 'ඳ': 'nda',
         'ප': 'pa', 'ඵ': 'pha', 'බ': 'ba', 'භ': 'bha', 'ම': 'ma',
         'ය': 'ya', 'ර': 'ra', 'ල': 'la', 'ව': 'va', 'ශ': 'sha',
         'ෂ': 'sha', 'ස': 'sa', 'හ': 'ha', 'ළ': 'lla', 'ෆ': 'fa',
@@ -62,13 +62,64 @@ const Transliteration = {
         while (i < text.length) {
             let char = text[i];
             let nextChar = i + 1 < text.length ? text[i + 1] : '';
-            let twoChars = char + nextChar;
+            let nextNextChar = i + 2 < text.length ? text[i + 2] : '';
             
-            // Try two-character combinations first (for special combinations)
-            if (this.sinhalaMap[twoChars]) {
-                result += this.sinhalaMap[twoChars];
-                i += 2;
-            } else if (this.tamilMap[twoChars]) {
+            // Check if this is a Sinhala consonant
+            const isSinhalaConsonant = char >= 'ක' && char <= 'හ';
+            
+            if (isSinhalaConsonant) {
+                // Get base consonant transliteration
+                let consonant = this.sinhalaMap[char] || char;
+                
+                // Check for virama (්) which removes the inherent 'a'
+                if (nextChar === '්') {
+                    // Remove the 'a' from consonant if it ends with 'a'
+                    if (consonant.endsWith('a')) {
+                        consonant = consonant.slice(0, -1);
+                    }
+                    
+                    // Check if there's a vowel sign after virama
+                    if (this.sinhalaMap[nextNextChar] && nextNextChar >= 'ා' && nextNextChar <= 'ෞ') {
+                        // Consonant + virama + vowel sign
+                        result += consonant + this.sinhalaMap[nextNextChar];
+                        i += 3;
+                        continue;
+                    } else if (nextNextChar === '‍') {
+                        // Zero-width joiner (U+200D) - check for vowel after it
+                        let charAfterZWJ = i + 3 < text.length ? text[i + 3] : '';
+                        if (this.sinhalaMap[charAfterZWJ]) {
+                            result += consonant + this.sinhalaMap[charAfterZWJ];
+                            i += 4;
+                            continue;
+                        }
+                    }
+                    
+                    // Just consonant + virama (no vowel following)
+                    result += consonant;
+                    i += 2;
+                    continue;
+                }
+                // Check for vowel sign directly after consonant (no virama)
+                else if (this.sinhalaMap[nextChar] && nextChar >= 'ා' && nextChar <= 'ෞ') {
+                    // Remove inherent 'a' and add vowel
+                    if (consonant.endsWith('a')) {
+                        consonant = consonant.slice(0, -1);
+                    }
+                    result += consonant + this.sinhalaMap[nextChar];
+                    i += 2;
+                    continue;
+                }
+                // Just the consonant with inherent 'a'
+                else {
+                    result += consonant;
+                    i++;
+                    continue;
+                }
+            }
+            
+            // Try two-character combinations for Tamil
+            let twoChars = char + nextChar;
+            if (this.tamilMap[twoChars]) {
                 result += this.tamilMap[twoChars];
                 i += 2;
             }
@@ -152,35 +203,81 @@ const Transliteration = {
             return true;
         }
         
-        // Phonetic variations in Singlish typing
-        const variations = {
-            'aa': ['a', 'aa', 'ā'],
-            'ee': ['e', 'ee', 'ē', 'i'],
-            'oo': ['o', 'oo', 'ō', 'u'],
-            'ii': ['i', 'ii', 'ī'],
-            'uu': ['u', 'uu', 'ū'],
-            'ae': ['a', 'ae', 'ä'],
-            'w': ['v', 'w'],
-            'v': ['v', 'w'],
-            'sh': ['sh', 's'],
-            'ch': ['ch', 'c'],
-            'th': ['th', 't'],
-            'dh': ['dh', 'd']
+        // Normalize and convert target to singlish
+        let targetSinglish = this.normalize(this.toSinglish(targetText));
+        let normalizedSearch = this.normalize(searchTerm);
+        
+        // Apply phonetic normalization to both search and target
+        // This makes variations match each other
+        const normalizePhonetic = (text) => {
+            return text
+                // Aspirated consonants can match unaspirated
+                .replace(/dh/g, 'd')
+                .replace(/th/g, 't')
+                .replace(/bh/g, 'b')
+                .replace(/gh/g, 'g')
+                .replace(/kh/g, 'k')
+                .replace(/ph/g, 'p')
+                .replace(/chh/g, 'ch')
+                // Vowel variations - order matters!
+                .replace(/aae/g, 'e')  // aae -> e
+                .replace(/mae/g, 'me')  // mae -> me (common in Sinhala)
+                .replace(/ae/g, 'e')  // ae and e are similar
+                .replace(/ai/g, 'i')  // ai can sound like i
+                // Double vowels can match single
+                .replace(/aa+/g, 'a')
+                .replace(/ee+/g, 'e')
+                .replace(/ii+/g, 'i')
+                .replace(/oo+/g, 'o')
+                .replace(/uu+/g, 'u')
+                // Common consonant equivalents
+                .replace(/w/g, 'v')
+                .replace(/y/g, 'j')  // y and j are often interchangeable (Jesus/Yesus)
+                .replace(/nda/g, 'nd')
+                .replace(/ll/g, 'l')
+                .replace(/sh/g, 's')
+                // Allow for optional trailing 'a' (common in Sinhala)
+                .replace(/na$/g, 'n')
+                // Remove duplicate letters
+                .replace(/(.)\1+/g, '$1');
         };
         
-        // Create regex pattern with variations
-        let pattern = this.normalize(searchTerm);
-        for (let [key, values] of Object.entries(variations)) {
-            const regex = new RegExp(key, 'g');
-            pattern = pattern.replace(regex, `(?:${values.join('|')})`);
+        const phoneticSearch = normalizePhonetic(normalizedSearch);
+        const phoneticTarget = normalizePhonetic(targetSinglish);
+        
+        // Check if phonetically normalized search appears in target
+        if (phoneticTarget.includes(phoneticSearch)) {
+            return true;
         }
         
+        // Also try with regex for more flexibility
         try {
+            // Create a pattern that allows optional 'h' after certain consonants
+            let pattern = normalizedSearch
+                .replace(/d/g, 'd[h]?')
+                .replace(/t/g, 't[h]?')
+                .replace(/b/g, 'b[h]?')
+                .replace(/g/g, 'g[h]?')
+                .replace(/k/g, 'k[h]?')
+                .replace(/p/g, 'p[h]?')
+                .replace(/c/g, 'c[h]?')
+                .replace(/s/g, 's[h]?')
+                // Allow single or double vowels
+                .replace(/a/g, 'a+')
+                .replace(/e/g, 'e+')
+                .replace(/i/g, 'i+')
+                .replace(/o/g, 'o+')
+                .replace(/u/g, 'u+')
+                // v and w are interchangeable
+                .replace(/v/g, '[vw]')
+                .replace(/w/g, '[vw]')
+                // l and ll
+                .replace(/l/g, 'l+');
+            
             const regex = new RegExp(pattern, 'i');
-            const targetSinglish = this.normalize(this.toSinglish(targetText));
             return regex.test(targetSinglish);
         } catch (e) {
-            // If regex fails, fall back to basic match
+            // If regex fails, use the phonetic match result
             return false;
         }
     },

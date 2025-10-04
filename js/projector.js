@@ -14,6 +14,9 @@ const fullscreenHint = document.getElementById('fullscreenHint');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    // Show welcome screen by default
+    showWelcomeScreen();
+    
     initWebSocket();
     
     // Hide fullscreen hint after 5 seconds
@@ -28,6 +31,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// Show welcome screen
+function showWelcomeScreen() {
+    // Add timestamp to prevent caching
+    const timestamp = new Date().getTime();
+    const iframe = document.createElement('iframe');
+    iframe.src = `welcome.html?v=${timestamp}`;
+    iframe.style.cssText = 'width: 100%; height: 100vh; border: none; position: fixed; top: 0; left: 0; z-index: 9999;';
+    
+    // Clear existing content and add new iframe
+    projectorContent.innerHTML = '';
+    projectorContent.appendChild(iframe);
+    
+    churchLogo.style.display = 'none';
+}
 
 // WebSocket Connection
 function initWebSocket() {
@@ -68,8 +86,16 @@ function initWebSocket() {
 function updateDisplay(content) {
     // Handle welcome screen
     if (content.type === 'welcome_screen') {
-        // Load the welcome page in an iframe
-        projectorContent.innerHTML = `<iframe src="welcome.html" style="width: 100%; height: 100vh; border: none; position: fixed; top: 0; left: 0; z-index: 9999;"></iframe>`;
+        // Load the welcome page in an iframe with cache busting
+        const timestamp = new Date().getTime();
+        const iframe = document.createElement('iframe');
+        iframe.src = `welcome.html?v=${timestamp}`;
+        iframe.style.cssText = 'width: 100%; height: 100vh; border: none; position: fixed; top: 0; left: 0; z-index: 9999;';
+        
+        // Clear existing content and add new iframe
+        projectorContent.innerHTML = '';
+        projectorContent.appendChild(iframe);
+        
         churchLogo.style.display = 'none';
         return;
     }
