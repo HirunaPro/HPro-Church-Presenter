@@ -25,9 +25,11 @@ A simple, self-hosted web application for displaying song lyrics and simple slid
 ## Features
 
 - **Operator Control Panel**: Search and select songs, control font sizes, and manage simple slides
+- **Singlish Search**: Search for Sinhala and Tamil songs using English letters (romanized/Singlish)
 - **Projector Display**: Clean, full-screen display for congregation viewing
 - **Real-time Updates**: WebSocket communication for instant content updates
 - **Song Library**: Searchable song database with multi-line verse display (4-6 lines at once)
+- **Multi-language Support**: Works seamlessly with Sinhala, Tamil, and English songs
 - **Simple Slides**: Pre-defined slides for welcome, sermon, prayer, announcements, and custom text
 - **Customizable**: Adjustable font sizes, church name, and logo
 - **No Internet Required**: Runs completely offline once set up
@@ -114,10 +116,13 @@ Press **F11** for full-screen mode.
 
 ## Operator Controls
 
-### Song Selection
-1. Use the search box to filter songs by title
-2. Click a song to load its verses
-3. Click any verse to display it on the projector (displays 4-6 lines at once)
+### Song Selection with Singlish Search
+1. Use the search box to filter songs - **supports Singlish, Sinhala, and Tamil input**
+2. Type in English letters to search for Sinhala/Tamil songs (e.g., type "yesu" to find "යේසු" or "இயேசு")
+3. Click a song to load its verses
+4. Click any verse to display it on the projector (displays 4-6 lines at once)
+
+**See [SINGLISH-SEARCH-GUIDE.md](SINGLISH-SEARCH-GUIDE.md) for detailed search examples and tips.**
 
 ### Font Size
 - **Small**: 36px
@@ -323,17 +328,22 @@ PresentationApp/
 ├── start.bat               # Windows startup script
 ├── Requirements.md         # Project requirements
 ├── README.md              # This file
+├── SINGLISH-SEARCH-GUIDE.md # Singlish search documentation
+├── MULTI-LINE-SONG-FORMAT.md # Song format guide
 ├── css/
 │   └── style.css          # Stylesheet
 ├── js/
 │   ├── operator.js        # Operator control logic
-│   └── projector.js       # Projector display logic
+│   ├── projector.js       # Projector display logic
+│   └── transliteration.js # Singlish search module
 ├── images/
 │   └── church-logo.png    # Church logo
 └── songs/
     ├── amazing-grace.json
     ├── blessed-assurance.json
-    └── how-great-thou-art.json
+    ├── how-great-thou-art.json
+    ├── ඔබ-දවය-පමල.json    # Sinhala song example
+    └── என்-இயேசுவே.json    # Tamil song example
 ```
 
 ## Technical Details

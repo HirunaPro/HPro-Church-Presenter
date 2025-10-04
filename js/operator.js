@@ -243,12 +243,23 @@ function displayPhrases(song) {
 
 // Setup event listeners
 function setupEventListeners() {
-    // Song search
+    // Song search with Singlish support
     songSearch.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const filteredSongs = songs.filter(song => 
-            song.title.toLowerCase().includes(searchTerm)
-        );
+        const searchTerm = e.target.value;
+        
+        // Use transliteration search if available, otherwise fall back to basic search
+        let filteredSongs;
+        if (typeof Transliteration !== 'undefined') {
+            // Use fuzzy matching for better Singlish search experience
+            filteredSongs = Transliteration.searchSongs(songs, searchTerm, true);
+        } else {
+            // Fallback to basic search
+            const searchLower = searchTerm.toLowerCase();
+            filteredSongs = songs.filter(song => 
+                song.title.toLowerCase().includes(searchLower)
+            );
+        }
+        
         displaySongs(filteredSongs);
     });
     
