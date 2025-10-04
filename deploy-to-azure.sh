@@ -78,6 +78,23 @@ echo "   Active Subscription: $SUBSCRIPTION"
 echo "   Tenant ID: $TENANT_ID"
 echo ""
 
+# Register required resource providers
+echo "📝 Checking required resource providers..."
+PROVIDERS=("Microsoft.Web" "Microsoft.Storage" "Microsoft.Network")
+
+for provider in "${PROVIDERS[@]}"; do
+    status=$(az provider show --namespace "$provider" --query "registrationState" -o tsv 2>/dev/null)
+    
+    if [ "$status" != "Registered" ]; then
+        echo "   Registering $provider..."
+        az provider register --namespace "$provider" --wait
+        echo "   ✅ $provider registered"
+    else
+        echo "   ✅ $provider already registered"
+    fi
+done
+echo ""
+
 # Create resource group
 echo "📦 Creating resource group..."
 if az group show --name $RESOURCE_GROUP &> /dev/null; then
@@ -91,36 +108,52 @@ echo ""
 # Create App Service Plan
 echo "📋 Creating App Service Plan (Free Tier)..."
 PLAN_NAME="church-plan-$RANDOM"
-az appservice plan create \
+
+if ! az appservice plan create \
   --name $PLAN_NAME \
   --resource-group $RESOURCE_GROUP \
   --sku F1 \
   --is-linux \
-  --output none
+  --output json 2>&1; then
+    echo "❌ Failed to create App Service Plan"
+    exit 1
+fi
 
 echo "✅ App Service Plan created"
 echo ""
 
 # Create Web App
 echo "🌐 Creating Web App..."
-az webapp create \
+
+if ! az webapp create \
   --resource-group $RESOURCE_GROUP \
   --plan $PLAN_NAME \
   --name $APP_NAME \
   --runtime "PYTHON:3.11" \
-  --output none
+  --output json 2>&1; then
+    echo "❌ Failed to create Web App"
+    echo ""
+    echo "Common issues:"
+    echo "  - App name '$APP_NAME' might already be taken (must be globally unique)"
+    echo "  - Try a different name like: $APP_NAME-$RANDOM"
+    exit 1
+fi
 
 echo "✅ Web App created"
 echo ""
 
 # Enable WebSocket
 echo "🔌 Enabling WebSocket support..."
-az webapp config set \
+
+if ! az webapp config set \
   --resource-group $RESOURCE_GROUP \
   --name $APP_NAME \
   --web-sockets-enabled true \
   --startup-file "python server.py" \
-  --output none
+  --output json 2>&1; then
+    echo "❌ Failed to enable WebSocket"
+    exit 1
+fi
 
 echo "✅ WebSocket enabled"
 echo ""

@@ -80,6 +80,23 @@ try {
 }
 Write-Host ""
 
+# Register required resource providers
+Write-Host "📝 Checking required resource providers..." -ForegroundColor Cyan
+$providers = @('Microsoft.Web', 'Microsoft.Storage', 'Microsoft.Network')
+
+foreach ($provider in $providers) {
+    $status = az provider show --namespace $provider --query "registrationState" -o tsv 2>$null
+    
+    if ($status -ne "Registered") {
+        Write-Host "   Registering $provider..." -ForegroundColor Yellow
+        az provider register --namespace $provider --wait
+        Write-Host "   ✅ $provider registered" -ForegroundColor Green
+    } else {
+        Write-Host "   ✅ $provider already registered" -ForegroundColor Gray
+    }
+}
+Write-Host ""
+
 # Create resource group
 Write-Host "📦 Creating resource group..." -ForegroundColor Cyan
 try {
@@ -99,36 +116,61 @@ Write-Host ""
 # Create App Service Plan
 Write-Host "📋 Creating App Service Plan (Free Tier)..." -ForegroundColor Cyan
 $PLAN_NAME = "church-plan-$(Get-Random)"
-az appservice plan create `
+
+$planResult = az appservice plan create `
   --name $PLAN_NAME `
   --resource-group $RESOURCE_GROUP `
   --sku F1 `
   --is-linux `
-  --output none
+  --output json 2>&1
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Failed to create App Service Plan" -ForegroundColor Red
+    Write-Host $planResult
+    exit 1
+}
 
 Write-Host "✅ App Service Plan created" -ForegroundColor Green
 Write-Host ""
 
 # Create Web App
 Write-Host "🌐 Creating Web App..." -ForegroundColor Cyan
-az webapp create `
+
+$webappResult = az webapp create `
   --resource-group $RESOURCE_GROUP `
   --plan $PLAN_NAME `
   --name $APP_NAME `
   --runtime "PYTHON:3.11" `
-  --output none
+  --output json 2>&1
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Failed to create Web App" -ForegroundColor Red
+    Write-Host $webappResult
+    Write-Host ""
+    Write-Host "Common issues:" -ForegroundColor Yellow
+    Write-Host "  - App name '$APP_NAME' might already be taken (must be globally unique)"
+    Write-Host "  - Try a different name like: $APP_NAME-$(Get-Random -Maximum 9999)"
+    exit 1
+}
 
 Write-Host "✅ Web App created" -ForegroundColor Green
 Write-Host ""
 
 # Enable WebSocket
 Write-Host "🔌 Enabling WebSocket support..." -ForegroundColor Cyan
-az webapp config set `
+
+$configResult = az webapp config set `
   --resource-group $RESOURCE_GROUP `
   --name $APP_NAME `
   --web-sockets-enabled true `
   --startup-file "python server.py" `
-  --output none
+  --output json 2>&1
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "❌ Failed to enable WebSocket" -ForegroundColor Red
+    Write-Host $configResult
+    exit 1
+}
 
 Write-Host "✅ WebSocket enabled" -ForegroundColor Green
 Write-Host ""
