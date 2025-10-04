@@ -74,6 +74,47 @@ Run the Python server directly:
 python3 server.py
 ```
 
+## Deployment Options
+
+### Option 1: Local Network (Recommended)
+
+Run on your local computer/network - perfect for on-site church services.
+
+**See instructions below** in the "Usage" section.
+
+### Option 2: Azure Cloud Hosting (NEW!)
+
+Deploy to Microsoft Azure for remote access from anywhere.
+
+**✨ New v2 Deployment Scripts Available!**
+
+```powershell
+# Windows - One command deploy
+.\deploy-to-azure-v2.ps1 -AppName "mychurch-app"
+
+# Linux/Mac - One command deploy  
+./deploy-to-azure-v2.sh --app-name "mychurch-app"
+```
+
+**Features:**
+- 🆓 **Free tier available** - $0/month
+- ⚡ **Fast deployment** - 2-3 minutes
+- 🌍 **Access from anywhere** - Internet-based
+- 🔄 **Multiple deployment methods** - ZIP, Git, GitHub
+- 📊 **Cost optimization** - Start/stop scripts included
+
+**Documentation:**
+- 📘 **Quick Deploy:** [docs/AZURE-QUICK-DEPLOY.md](docs/AZURE-QUICK-DEPLOY.md) - Fastest way to deploy
+- 📗 **Full Guide:** [docs/AZURE-DEPLOYMENT-V2.md](docs/AZURE-DEPLOYMENT-V2.md) - Complete reference
+- 📙 **Migration Guide:** [docs/MIGRATION-V1-TO-V2.md](docs/MIGRATION-V1-TO-V2.md) - Upgrade from v1
+
+**Pricing:**
+- Free (F1): $0/month - Perfect for churches!
+- Basic (B1): ~$13/month (or $0.43/month with start/stop)
+- Standard (S1): ~$69/month (auto-scaling, SSL)
+
+---
+
 ## Usage
 
 ### 1. Start the Server
