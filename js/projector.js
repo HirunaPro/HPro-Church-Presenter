@@ -88,7 +88,10 @@ function updateDisplay(content) {
     
     // Update text content
     if (content.text) {
-        projectorContent.textContent = content.text;
+        // Use innerHTML to preserve line breaks
+        // Replace newlines with <br> tags for proper display
+        const formattedText = content.text.replace(/\n/g, '<br>');
+        projectorContent.innerHTML = formattedText;
     }
     
     // Add smooth transition effect

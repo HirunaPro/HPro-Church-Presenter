@@ -193,7 +193,25 @@ function displayPhrases(song) {
     song.phrases.forEach((phrase, index) => {
         const phraseItem = document.createElement('div');
         phraseItem.className = 'phrase-item';
-        phraseItem.textContent = phrase;
+        
+        // Handle both string phrases (old format) and array phrases (new multi-line format)
+        let phraseText;
+        let displayText;
+        
+        if (Array.isArray(phrase)) {
+            // New format: array of lines
+            phraseText = phrase.join('\n');
+            displayText = phrase.join('\n');
+        } else {
+            // Old format: single string
+            phraseText = phrase;
+            displayText = phrase;
+        }
+        
+        // Use pre-wrap to preserve line breaks in the operator panel
+        phraseItem.style.whiteSpace = 'pre-wrap';
+        phraseItem.textContent = displayText;
+        
         phraseItem.addEventListener('click', () => {
             // Remove active class from all phrases
             document.querySelectorAll('.phrase-item').forEach(p => {
@@ -206,7 +224,7 @@ function displayPhrases(song) {
             // Send to projector
             sendToProjector({
                 type: 'song_phrase',
-                text: phrase,
+                text: phraseText,
                 fontSize: currentFontSize,
                 songTitle: song.title
             });

@@ -53,7 +53,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         print(f"[HTTP] {self.address_string()} - {format % args}")
 
 
-async def websocket_handler(websocket, path):
+async def websocket_handler(websocket):
     """Handle WebSocket connections"""
     # Register the client
     connected_clients.add(websocket)

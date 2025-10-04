@@ -2,12 +2,32 @@
 
 A simple, self-hosted web application for displaying song lyrics and simple slides during church worship services. Control content from an operator panel and display it on a projector in real-time using WebSocket communication.
 
+---
+
+## 🚀 Quick Start (TL;DR)
+
+**First time:**
+1. Install Python (with "Add to PATH" checked)
+2. Open terminal in project folder
+3. Run: `pip install websockets`
+
+**Every time:**
+1. Open terminal in project folder
+2. Run: `python server.py`
+3. Open browser → `http://localhost:8000/index.html`
+4. Click "Open Operator Control" and "Open Projector Display"
+5. Press F11 on projector for full-screen
+
+**See [QUICK-START.md](QUICK-START.md) for detailed step-by-step guide.**
+
+---
+
 ## Features
 
 - **Operator Control Panel**: Search and select songs, control font sizes, and manage simple slides
 - **Projector Display**: Clean, full-screen display for congregation viewing
 - **Real-time Updates**: WebSocket communication for instant content updates
-- **Song Library**: Searchable song database with phrase-by-phrase display
+- **Song Library**: Searchable song database with multi-line verse display (4-6 lines at once)
 - **Simple Slides**: Pre-defined slides for welcome, sermon, prayer, announcements, and custom text
 - **Customizable**: Adjustable font sizes, church name, and logo
 - **No Internet Required**: Runs completely offline once set up
@@ -96,8 +116,8 @@ Press **F11** for full-screen mode.
 
 ### Song Selection
 1. Use the search box to filter songs by title
-2. Click a song to load its phrases
-3. Click any phrase to display it on the projector
+2. Click a song to load its verses
+3. Click any verse to display it on the projector (displays 4-6 lines at once)
 
 ### Font Size
 - **Small**: 36px
@@ -122,20 +142,42 @@ The connection indicator shows:
 
 Songs are stored as JSON files in the `songs/` directory.
 
-### Song File Format
+### Song File Format (Multi-Line Verses)
 
-Create a new `.json` file in the `songs/` folder:
+The app now supports displaying multiple lines at once (4-6 lines per verse). Create a new `.json` file in the `songs/` folder:
 
 ```json
 {
   "title": "Your Song Title",
   "phrases": [
-    "First line of the song",
-    "Second line of the song",
-    "Third line of the song"
+    [
+      "First line of verse 1",
+      "Second line of verse 1",
+      "Third line of verse 1",
+      "Fourth line of verse 1"
+    ],
+    [
+      "First line of verse 2",
+      "Second line of verse 2",
+      "Third line of verse 2",
+      "Fourth line of verse 2"
+    ]
   ]
 }
 ```
+
+**Note:** The old single-line format is still supported for backward compatibility:
+```json
+{
+  "title": "Your Song Title",
+  "phrases": [
+    "Single line 1",
+    "Single line 2"
+  ]
+}
+```
+
+**See [MULTI-LINE-SONG-FORMAT.md](MULTI-LINE-SONG-FORMAT.md) for detailed guide and examples.**
 
 ### Naming Convention
 - Use lowercase letters
@@ -150,10 +192,18 @@ File: `songs/joyful-joyful.json`
 {
   "title": "Joyful, Joyful We Adore Thee",
   "phrases": [
-    "Joyful, joyful we adore Thee",
-    "God of glory, Lord of love",
-    "Hearts unfold like flowers before Thee",
-    "Opening to the sun above"
+    [
+      "Joyful, joyful we adore Thee",
+      "God of glory, Lord of love",
+      "Hearts unfold like flowers before Thee",
+      "Opening to the sun above"
+    ],
+    [
+      "All Thy works with joy surround Thee",
+      "Earth and heaven reflect Thy rays",
+      "Stars and angels sing around Thee",
+      "Center of unbroken praise"
+    ]
   ]
 }
 ```

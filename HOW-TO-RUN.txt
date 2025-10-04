@@ -1,0 +1,108 @@
+┌─────────────────────────────────────────────────────────────────┐
+│                    HOW TO RUN THE APP                            │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 1: Open Terminal/Command Prompt                           │
+│  ─────────────────────────────────────────────────────────────  │
+│  Windows: Win + R → type "cmd" → Enter                          │
+│  Or: Right-click folder → "Open in Terminal"                    │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 2: Navigate to Project Folder                             │
+│  ─────────────────────────────────────────────────────────────  │
+│  cd D:\_Personal\Project\PresentationApp                        │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 3: Start the Server                                       │
+│  ─────────────────────────────────────────────────────────────  │
+│  python server.py                                               │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 4: Server is Running! You'll see:                         │
+│  ─────────────────────────────────────────────────────────────  │
+│  ============================================================   │
+│    Church Presentation Web App Server                           │
+│  ============================================================   │
+│                                                                  │
+│  Access the application at:                                     │
+│    http://10.58.14.60:8000/index.html                           │
+│                                                                  │
+│  HTTP Server running on:                                        │
+│    - http://localhost:8000                                      │
+│    - http://10.58.14.60:8000                                    │
+│                                                                  │
+│  WebSocket Server running on:                                   │
+│    - ws://localhost:8765                                        │
+│    - ws://10.58.14.60:8765                                      │
+│  ============================================================   │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 5: Open in Browser                                        │
+│  ─────────────────────────────────────────────────────────────  │
+│  On your computer:                                              │
+│    http://localhost:8000/index.html                             │
+│                                                                  │
+│  On other devices (same WiFi):                                  │
+│    http://10.58.14.60:8000/index.html                           │
+│    (Use the IP shown in YOUR terminal)                          │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 6: Choose Your Role                                       │
+│  ─────────────────────────────────────────────────────────────  │
+│  ┌──────────────────────┐     ┌──────────────────────┐         │
+│  │  Operator Control    │     │  Projector Display   │         │
+│  │  ─────────────────   │     │  ──────────────────  │         │
+│  │  Control songs &     │     │  Shows what the      │         │
+│  │  slides              │     │  congregation sees   │         │
+│  │                      │     │                      │         │
+│  │  Open on YOUR        │     │  Open on PROJECTOR   │         │
+│  │  computer            │     │  computer            │         │
+│  └──────────────────────┘     └──────────────────────┘         │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  DONE! You're ready to use the app                              │
+│  ─────────────────────────────────────────────────────────────  │
+│  • Select songs on operator page                                │
+│  • They appear on projector page automatically                  │
+│  • Press F11 on projector for full-screen                       │
+│                                                                  │
+│  To STOP: Press Ctrl + C in the terminal                        │
+└─────────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════
+  TROUBLESHOOTING
+═══════════════════════════════════════════════════════════════════
+
+❌ "Disconnected" on operator page?
+   → Server not running or refresh the page
+
+❌ "Port already in use" error?
+   → Close other Python processes or restart your computer
+
+❌ Can't connect from projector computer?
+   → Make sure both are on same WiFi
+   → Use the IP address shown in terminal (not localhost)
+
+❌ Songs not loading?
+   → Make sure .json files are in songs/ folder
+   → Refresh the operator page
+
+═══════════════════════════════════════════════════════════════════
+  FIRST TIME SETUP (Do Once)
+═══════════════════════════════════════════════════════════════════
+
+1. Install Python from python.org
+   ✓ Check "Add Python to PATH"
+
+2. Open terminal and run:
+   pip install websockets
+
+═══════════════════════════════════════════════════════════════════
