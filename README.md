@@ -76,17 +76,43 @@ python3 server.py
 
 ## Deployment Options
 
-### Option 1: Local Network (Recommended)
+### Option 1: Local Network (Recommended for On-Site)
 
 Run on your local computer/network - perfect for on-site church services.
 
 **See instructions below** in the "Usage" section.
 
-### Option 2: Azure Cloud Hosting (NEW!)
+### Option 2: Azure Container Instances (Recommended for Cloud) ⭐
 
-Deploy to Microsoft Azure for remote access from anywhere.
+**Full WebSocket Support** - Perfect for this app! Deploy to Azure Container Instances with native WebSocket support.
 
-**✨ New v2 Deployment Scripts Available!**
+```powershell
+# Windows - One command deploy
+.\deploy-azure-container.ps1 -AppName "mychurch-app"
+
+# Linux/Mac - One command deploy
+./deploy-azure-container.sh --app-name "mychurch-app"
+```
+
+**Why Container Instances:**
+- ✅ **Full WebSocket Support** - Native ws:// protocol support
+- ✅ **Pay-per-second** - Only $0.57/month for weekly use (3hr/week)
+- ✅ **No quota issues** - Different quota from App Service
+- ✅ **Easy start/stop** - Save money when not in use
+- ✅ **5-minute deployment** - Fast and simple
+
+**Documentation:**
+- 🚀 **Quick Start:** [docs/AZURE-CONTAINER-QUICKSTART.md](docs/AZURE-CONTAINER-QUICKSTART.md) - Deploy in 5 minutes
+- 📘 **Full Guide:** [docs/AZURE-CONTAINER-DEPLOYMENT.md](docs/AZURE-CONTAINER-DEPLOYMENT.md) - Complete reference
+
+**Pricing:**
+- 3 hours/week (Sundays): **$0.57/month** ⭐
+- 6 hours/week (Sun + Wed): **$1.14/month**
+- 24/7: ~$35/month
+
+### Option 3: Azure App Service (Alternative)
+
+Deploy to Azure App Service (requires WebSocket configuration).
 
 ```powershell
 # Windows - One command deploy
@@ -97,19 +123,17 @@ Deploy to Microsoft Azure for remote access from anywhere.
 ```
 
 **Features:**
-- 🆓 **Free tier available** - $0/month
+- 🆓 **Free tier available** - $0/month (with limitations)
 - ⚡ **Fast deployment** - 2-3 minutes
 - 🌍 **Access from anywhere** - Internet-based
-- 🔄 **Multiple deployment methods** - ZIP, Git, GitHub
 - 📊 **Cost optimization** - Start/stop scripts included
 
 **Documentation:**
-- 📘 **Quick Deploy:** [docs/AZURE-QUICK-DEPLOY.md](docs/AZURE-QUICK-DEPLOY.md) - Fastest way to deploy
-- 📗 **Full Guide:** [docs/AZURE-DEPLOYMENT-V2.md](docs/AZURE-DEPLOYMENT-V2.md) - Complete reference
-- 📙 **Migration Guide:** [docs/MIGRATION-V1-TO-V2.md](docs/MIGRATION-V1-TO-V2.md) - Upgrade from v1
+- 📘 **Quick Deploy:** [docs/AZURE-QUICK-DEPLOY.md](docs/AZURE-QUICK-DEPLOY.md)
+- 📗 **Full Guide:** [docs/AZURE-DEPLOYMENT-V2.md](docs/AZURE-DEPLOYMENT-V2.md)
 
 **Pricing:**
-- Free (F1): $0/month - Perfect for churches!
+- Free (F1): $0/month - Limited (may have WebSocket issues)
 - Basic (B1): ~$13/month (or $0.43/month with start/stop)
 - Standard (S1): ~$69/month (auto-scaling, SSL)
 
