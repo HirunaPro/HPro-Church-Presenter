@@ -31,6 +31,12 @@ const importSongs = document.getElementById('importSongs');
 const bulkSongInput = document.getElementById('bulkSongInput');
 const importStatus = document.getElementById('importStatus');
 const showWelcomeScreenBtn = document.getElementById('showWelcomeScreen');
+const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+const operatorSidebar = document.getElementById('operatorSidebar');
+const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+const selectedSongInfo = document.getElementById('selectedSongInfo');
+const selectedSongTitle = document.getElementById('selectedSongTitle');
+const clearSelectionBtn = document.getElementById('clearSelection');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -187,16 +193,22 @@ function selectSong(song) {
     
     // Display phrases
     displayPhrases(song);
+    
+    // Close mobile menu if open
+    if (typeof window.closeMobileMenuOnSelection === 'function') {
+        window.closeMobileMenuOnSelection();
+    }
 }
 
 // Display phrases for selected song
 function displayPhrases(song) {
-    phrasesSection.innerHTML = `
-        <h2>${song.title}</h2>
-        <div id="phrasesList"></div>
-    `;
+    // Show selected song info
+    if (selectedSongInfo && selectedSongTitle) {
+        selectedSongInfo.style.display = 'block';
+        selectedSongTitle.textContent = song.title;
+    }
     
-    const phrasesList = document.getElementById('phrasesList');
+    phrasesSection.innerHTML = '';
     
     song.phrases.forEach((phrase, index) => {
         const phraseItem = document.createElement('div');
@@ -216,8 +228,6 @@ function displayPhrases(song) {
             displayText = phrase;
         }
         
-        // Use pre-wrap to preserve line breaks in the operator panel
-        phraseItem.style.whiteSpace = 'pre-wrap';
         phraseItem.textContent = displayText;
         
         phraseItem.addEventListener('click', () => {
@@ -237,12 +247,68 @@ function displayPhrases(song) {
                 songTitle: song.title
             });
         });
-        phrasesList.appendChild(phraseItem);
+        phrasesSection.appendChild(phraseItem);
     });
+    
+    // Switch to Songs tab automatically when song is selected
+    switchTab('songs');
 }
 
 // Setup event listeners
 function setupEventListeners() {
+    // Tab switching
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', () => {
+            const tabName = button.dataset.tab;
+            switchTab(tabName);
+        });
+    });
+    
+    // Clear song selection
+    if (clearSelectionBtn) {
+        clearSelectionBtn.addEventListener('click', () => {
+            clearSongSelection();
+        });
+    }
+    
+    // Mobile menu toggle
+    if (mobileMenuToggle && operatorSidebar && mobileMenuOverlay) {
+        mobileMenuToggle.addEventListener('click', () => {
+            operatorSidebar.classList.toggle('mobile-open');
+            mobileMenuOverlay.classList.toggle('active');
+            
+            // Update button icon
+            if (operatorSidebar.classList.contains('mobile-open')) {
+                mobileMenuToggle.innerHTML = '✕';
+                mobileMenuToggle.setAttribute('aria-label', 'Close menu');
+            } else {
+                mobileMenuToggle.innerHTML = '☰';
+                mobileMenuToggle.setAttribute('aria-label', 'Toggle menu');
+            }
+        });
+        
+        // Close mobile menu when clicking on overlay
+        mobileMenuOverlay.addEventListener('click', () => {
+            operatorSidebar.classList.remove('mobile-open');
+            mobileMenuOverlay.classList.remove('active');
+            mobileMenuToggle.innerHTML = '☰';
+            mobileMenuToggle.setAttribute('aria-label', 'Toggle menu');
+        });
+        
+        // Close mobile menu when song is selected
+        const closeMobileMenuOnSelection = () => {
+            if (window.innerWidth <= 768 && operatorSidebar.classList.contains('mobile-open')) {
+                operatorSidebar.classList.remove('mobile-open');
+                mobileMenuOverlay.classList.remove('active');
+                mobileMenuToggle.innerHTML = '☰';
+                mobileMenuToggle.setAttribute('aria-label', 'Toggle menu');
+            }
+        };
+        
+        // Store the function for use in selectSong
+        window.closeMobileMenuOnSelection = closeMobileMenuOnSelection;
+    }
+    
     // Song search with Singlish support
     songSearch.addEventListener('input', (e) => {
         const searchTerm = e.target.value;
@@ -263,7 +329,7 @@ function setupEventListeners() {
         displaySongs(filteredSongs);
     });
     
-    // Font size buttons
+    // Font size buttons (both compact and regular)
     document.querySelectorAll('[data-font]').forEach(btn => {
         btn.addEventListener('click', () => {
             // Remove active class from all font buttons
@@ -499,4 +565,46 @@ async function saveSongs(songs) {
 function showImportStatus(message, type) {
     importStatus.textContent = message;
     importStatus.className = `import-status ${type}`;
+}
+
+// Switch between tabs
+function switchTab(tabName) {
+    // Remove active class from all tabs and content
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Add active class to selected tab and content
+    const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
+    const tabContent = document.getElementById(`${tabName}Tab`);
+    
+    if (tabButton) tabButton.classList.add('active');
+    if (tabContent) tabContent.classList.add('active');
+}
+
+// Clear song selection
+function clearSongSelection() {
+    selectedSong = null;
+    
+    // Clear selected state in song list
+    document.querySelectorAll('.song-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+    
+    // Hide selected song info
+    if (selectedSongInfo) {
+        selectedSongInfo.style.display = 'none';
+    }
+    
+    // Show no song selected message
+    phrasesSection.innerHTML = `
+        <div class="no-song-selected">
+            <div class="empty-state-icon">🎵</div>
+            <h3>No Song Selected</h3>
+            <p>Open the menu and select a song to view its phrases</p>
+        </div>
+    `;
 }
