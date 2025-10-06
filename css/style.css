@@ -826,6 +826,15 @@ body {
     line-height: 1.8;
 }
 
+.font-auto {
+    white-space: nowrap;
+    overflow: visible !important;
+    max-width: 100% !important;
+    width: auto !important;
+    display: inline-block;
+    line-height: 1.2;
+}
+
 .fullscreen-hint {
     position: fixed;
     bottom: 20px;

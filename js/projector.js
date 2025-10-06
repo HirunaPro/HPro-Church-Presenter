@@ -141,6 +141,7 @@ function updateDisplay(content) {
     
     // Update font size class
     const newFontClass = content.fontSize ? `font-${content.fontSize}` : 'font-medium';
+    const isAutoFont = content.fontSize === 'auto';
     
     // Handle blank screen
     if (content.type === 'blank') {
@@ -185,6 +186,11 @@ function updateDisplay(content) {
         projectorContent.className = 'projector-content';
         projectorContent.classList.add(newFontClass);
         
+        // If auto font size, calculate optimal size
+        if (isAutoFont) {
+            calculateAutoFontSize();
+        }
+        
         // Handle next verse preview
         if (content.nextVersePreview) {
             nextVersePreview.textContent = content.nextVersePreview;
@@ -214,6 +220,78 @@ function updateDisplay(content) {
         }, 50); // Small delay before fade in
         
     }, 500); // Duration matches fade-out transition (0.5s)
+}
+
+// Calculate and apply the optimal font size for auto mode
+function calculateAutoFontSize() {
+    // Get the container dimensions
+    const containerWidth = projectorContainer.clientWidth;
+    const containerHeight = projectorContainer.clientHeight;
+    
+    // Calculate actual available space
+    // Account for song title if visible
+    const songTitleHeight = songTitleDisplay.classList.contains('visible') ? 
+        songTitleDisplay.offsetHeight + 20 : 0;
+    
+    // Account for next verse preview if visible
+    const nextVerseHeight = nextVersePreview.classList.contains('visible') ? 
+        nextVersePreview.offsetHeight + 20 : 0;
+    
+    // Account for church logo
+    const logoHeight = churchLogo.style.display !== 'none' ? 100 : 0;
+    
+    // More generous padding to prevent cropping
+    const paddingHorizontal = 100; // Left and right padding combined
+    const paddingVertical = 80; // Top and bottom padding
+    
+    const availableWidth = containerWidth - paddingHorizontal;
+    const availableHeight = containerHeight - songTitleHeight - nextVerseHeight - logoHeight - paddingVertical;
+    
+    // Start with a large font size and reduce until it fits
+    let minFontSize = 20;
+    let maxFontSize = 250;
+    let bestFontSize = minFontSize;
+    
+    // Create a temporary element to measure text
+    const tempElement = document.createElement('div');
+    tempElement.style.cssText = `
+        position: absolute;
+        visibility: hidden;
+        white-space: nowrap;
+        display: inline-block;
+        padding: 0;
+        margin: 0;
+    `;
+    tempElement.innerHTML = projectorContent.innerHTML;
+    document.body.appendChild(tempElement);
+    
+    // Binary search for the optimal font size
+    while (maxFontSize - minFontSize > 1) {
+        const fontSize = Math.floor((minFontSize + maxFontSize) / 2);
+        tempElement.style.fontSize = fontSize + 'px';
+        tempElement.style.lineHeight = '1.2';
+        
+        const textWidth = tempElement.offsetWidth;
+        const textHeight = tempElement.offsetHeight;
+        
+        // Add small buffer to prevent edge cropping
+        if (textWidth <= availableWidth * 0.95 && textHeight <= availableHeight * 0.95) {
+            bestFontSize = fontSize;
+            minFontSize = fontSize;
+        } else {
+            maxFontSize = fontSize;
+        }
+    }
+    
+    // Clean up
+    document.body.removeChild(tempElement);
+    
+    // Apply the calculated font size with inline styles
+    projectorContent.style.fontSize = bestFontSize + 'px';
+    projectorContent.style.lineHeight = '1.2';
+    
+    console.log('Auto font size:', bestFontSize, 'px', 
+                'Available space:', availableWidth, 'x', availableHeight);
 }
 
 // Allow F11 key for fullscreen
