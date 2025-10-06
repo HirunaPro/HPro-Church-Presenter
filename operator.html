@@ -40,6 +40,15 @@
                     Loading songs...
                 </p>
             </div>
+            
+            <div class="song-actions">
+                <button class="song-action-btn export-btn" id="exportSongsBtn" title="Export all songs as JSON">
+                    ⬇️ Export All
+                </button>
+                <button class="song-action-btn import-btn" id="importSongsBtn" title="Import songs from JSON file">
+                    ⬆️ Import
+                </button>
+            </div>
         </div>
         
         <!-- Main Control Area -->
@@ -50,9 +59,9 @@
                 <div class="control-section-compact">
                     <h3>Font Size</h3>
                     <div class="button-group-compact">
-                        <button class="control-button-compact" data-font="small">Small</button>
-                        <button class="control-button-compact active" data-font="medium">Medium</button>
-                        <button class="control-button-compact" data-font="large">Large</button>
+                        <button class="control-button-compact" data-font="small">S</button>
+                        <button class="control-button-compact active" data-font="medium">M</button>
+                        <button class="control-button-compact" data-font="large">L</button>
                         <button class="control-button-compact" data-font="extra-large">XL</button>
                     </div>
                 </div>
@@ -76,6 +85,9 @@
                 </button>
                 <button class="tab-button active" data-tab="songs">
                     <span class="tab-icon">🎵</span> Songs
+                </button>
+                <button class="tab-button" data-tab="bible">
+                    <span class="tab-icon">📖</span> Bible
                 </button>
             </div>
             
@@ -109,11 +121,11 @@
                     
                     <!-- Custom Text Section -->
                     <div class="custom-text-section">
-                        <h4>Custom Text / Bible Verse</h4>
+                        <h4>Custom Text</h4>
                         <textarea 
                             class="custom-text-input" 
                             id="bibleVerse" 
-                            placeholder="Enter custom text or Bible verse here..."
+                            placeholder="Enter custom text here..."
                         ></textarea>
                         <button class="show-custom-btn" id="showBibleVerse">
                             Show Custom Text
@@ -138,6 +150,21 @@
                             <h3>No Song Selected</h3>
                             <p>Open the menu and select a song to view its phrases</p>
                         </div>
+                    </div>
+                </div>
+                
+                <!-- Bible Tab -->
+                <div class="tab-content" id="bibleTab">
+                    <div class="custom-text-section">
+                        <h4>Bible Verse</h4>
+                        <textarea 
+                            class="custom-text-input" 
+                            id="bibleVerseTab" 
+                            placeholder="Enter Bible verse here..."
+                        ></textarea>
+                        <button class="show-custom-btn" id="showBibleVerseTab">
+                            Show Bible Verse
+                        </button>
                     </div>
                 </div>
             </div>
@@ -183,6 +210,41 @@ O what a foretaste of glory divine</pre>
                     <button class="modal-btn import-btn" id="importSongs">Import Songs</button>
                 </div>
                 <div id="importStatus" class="import-status"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Song Modal -->
+    <div id="editSongModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Song</h2>
+                <span class="close-modal" id="closeEditModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="edit-song-form">
+                    <label for="editSongTitle">Song Title:</label>
+                    <input type="text" id="editSongTitle" class="edit-song-input" placeholder="Enter song title...">
+                    
+                    <label for="editSongContent">Song Content:</label>
+                    <p class="edit-instructions">Separate each verse with a blank line. Each line within a verse will be displayed separately.</p>
+                    <textarea 
+                        id="editSongContent" 
+                        class="edit-song-textarea" 
+                        placeholder="Verse 1 line 1
+Verse 1 line 2
+
+Verse 2 line 1
+Verse 2 line 2"
+                    ></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-btn delete-btn" id="deleteSongBtn">Delete Song</button>
+                    <div style="flex: 1;"></div>
+                    <button class="modal-btn cancel-btn" id="cancelEdit">Cancel</button>
+                    <button class="modal-btn import-btn" id="saveSongEdit">Save Changes</button>
+                </div>
+                <div id="editStatus" class="import-status"></div>
             </div>
         </div>
     </div>

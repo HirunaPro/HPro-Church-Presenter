@@ -11,6 +11,8 @@ const projectorContainer = document.getElementById('projectorContainer');
 const projectorContent = document.getElementById('projectorContent');
 const churchLogo = document.getElementById('churchLogo');
 const fullscreenHint = document.getElementById('fullscreenHint');
+const nextVersePreview = document.getElementById('nextVersePreview');
+const songTitleDisplay = document.getElementById('songTitleDisplay');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -34,17 +36,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Show welcome screen
 function showWelcomeScreen() {
-    // Add timestamp to prevent caching
-    const timestamp = new Date().getTime();
-    const iframe = document.createElement('iframe');
-    iframe.src = `welcome.html?v=${timestamp}`;
-    iframe.style.cssText = 'width: 100%; height: 100vh; border: none; position: fixed; top: 0; left: 0; z-index: 9999;';
+    // Fade out current content first
+    projectorContent.classList.add('fade-out');
     
-    // Clear existing content and add new iframe
-    projectorContent.innerHTML = '';
-    projectorContent.appendChild(iframe);
-    
-    churchLogo.style.display = 'none';
+    setTimeout(() => {
+        // Add timestamp to prevent caching
+        const timestamp = new Date().getTime();
+        const iframe = document.createElement('iframe');
+        iframe.src = `welcome.html?v=${timestamp}`;
+        iframe.style.cssText = 'width: 100%; height: 100vh; border: none; position: fixed; top: 0; left: 0; z-index: 9999; opacity: 0; transition: opacity 0.5s ease-in-out;';
+        
+        // Clear existing content and add new iframe
+        projectorContent.innerHTML = '';
+        projectorContent.appendChild(iframe);
+        
+        churchLogo.style.display = 'none';
+        
+        // Fade in iframe after load
+        iframe.onload = () => {
+            iframe.style.opacity = '1';
+        };
+        
+        // Fade in immediately if load event doesn't fire
+        setTimeout(() => {
+            iframe.style.opacity = '1';
+        }, 100);
+    }, 500);
 }
 
 // WebSocket Connection
@@ -86,33 +103,62 @@ function initWebSocket() {
 function updateDisplay(content) {
     // Handle welcome screen
     if (content.type === 'welcome_screen') {
-        // Load the welcome page in an iframe with cache busting
-        const timestamp = new Date().getTime();
-        const iframe = document.createElement('iframe');
-        iframe.src = `welcome.html?v=${timestamp}`;
-        iframe.style.cssText = 'width: 100%; height: 100vh; border: none; position: fixed; top: 0; left: 0; z-index: 9999;';
+        // Fade out current content
+        projectorContent.classList.add('fade-out');
         
-        // Clear existing content and add new iframe
-        projectorContent.innerHTML = '';
-        projectorContent.appendChild(iframe);
+        setTimeout(() => {
+            // Load the welcome page in an iframe with cache busting
+            const timestamp = new Date().getTime();
+            const iframe = document.createElement('iframe');
+            iframe.src = `welcome.html?v=${timestamp}`;
+            iframe.style.cssText = 'width: 100%; height: 100vh; border: none; position: fixed; top: 0; left: 0; z-index: 9999; opacity: 0; transition: opacity 0.5s ease-in-out;';
+            
+            // Clear existing content and add new iframe
+            projectorContent.innerHTML = '';
+            projectorContent.appendChild(iframe);
+            
+            churchLogo.style.display = 'none';
+            
+            // Hide next verse preview for welcome screen
+            nextVersePreview.classList.remove('visible');
+            
+            // Hide song title for welcome screen
+            songTitleDisplay.classList.remove('visible');
+            
+            // Fade in iframe after load
+            iframe.onload = () => {
+                iframe.style.opacity = '1';
+            };
+            
+            // Fade in immediately if load event doesn't fire
+            setTimeout(() => {
+                iframe.style.opacity = '1';
+            }, 100);
+        }, 500);
         
-        churchLogo.style.display = 'none';
         return;
     }
     
-    // Update font size
-    projectorContent.className = 'projector-content';
-    if (content.fontSize) {
-        projectorContent.classList.add(`font-${content.fontSize}`);
-    } else {
-        projectorContent.classList.add('font-medium'); // Default
-    }
+    // Update font size class
+    const newFontClass = content.fontSize ? `font-${content.fontSize}` : 'font-medium';
     
     // Handle blank screen
     if (content.type === 'blank') {
-        projectorContainer.classList.add('blank');
-        projectorContent.classList.add('blank');
-        churchLogo.style.display = 'none';
+        // Fade out before going blank
+        projectorContent.classList.add('fade-out');
+        
+        setTimeout(() => {
+            projectorContainer.classList.add('blank');
+            projectorContent.classList.add('blank');
+            churchLogo.style.display = 'none';
+            
+            // Hide next verse preview for blank screen
+            nextVersePreview.classList.remove('visible');
+            
+            // Hide song title for blank screen
+            songTitleDisplay.classList.remove('visible');
+        }, 500); // Wait for fade out
+        
         return;
     } else {
         projectorContainer.classList.remove('blank');
@@ -120,20 +166,54 @@ function updateDisplay(content) {
         churchLogo.style.display = 'block';
     }
     
-    // Update text content
-    if (content.text) {
-        // Use innerHTML to preserve line breaks
-        // Replace newlines with <br> tags for proper display
-        const formattedText = content.text.replace(/\n/g, '<br>');
-        projectorContent.innerHTML = formattedText;
-    }
+    // Fade transition sequence for content changes
+    // Step 1: Fade out current content
+    projectorContent.classList.add('fade-out');
+    projectorContent.classList.remove('fade-in');
     
-    // Add smooth transition effect
-    projectorContent.style.opacity = '0';
+    // Step 2: After fade out completes, update content
     setTimeout(() => {
-        projectorContent.style.transition = 'opacity 0.3s ease-in-out';
-        projectorContent.style.opacity = '1';
-    }, 50);
+        // Update text content
+        if (content.text) {
+            // Use innerHTML to preserve line breaks
+            // Replace newlines with <br> tags for proper display
+            const formattedText = content.text.replace(/\n/g, '<br>');
+            projectorContent.innerHTML = formattedText;
+        }
+        
+        // Update font size
+        projectorContent.className = 'projector-content';
+        projectorContent.classList.add(newFontClass);
+        
+        // Handle next verse preview
+        if (content.nextVersePreview) {
+            nextVersePreview.textContent = content.nextVersePreview;
+            // Delay preview appearance slightly
+            setTimeout(() => {
+                nextVersePreview.classList.add('visible');
+            }, 300);
+        } else {
+            nextVersePreview.classList.remove('visible');
+        }
+        
+        // Handle song title display
+        if (content.songTitle && content.type === 'song_phrase') {
+            songTitleDisplay.textContent = content.songTitle;
+            // Delay title appearance slightly
+            setTimeout(() => {
+                songTitleDisplay.classList.add('visible');
+            }, 300);
+        } else {
+            songTitleDisplay.classList.remove('visible');
+        }
+        
+        // Step 3: Fade in new content
+        setTimeout(() => {
+            projectorContent.classList.remove('fade-out');
+            projectorContent.classList.add('fade-in');
+        }, 50); // Small delay before fade in
+        
+    }, 500); // Duration matches fade-out transition (0.5s)
 }
 
 // Allow F11 key for fullscreen

@@ -37,6 +37,24 @@ const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
 const selectedSongInfo = document.getElementById('selectedSongInfo');
 const selectedSongTitle = document.getElementById('selectedSongTitle');
 const clearSelectionBtn = document.getElementById('clearSelection');
+const bibleVerseTabInput = document.getElementById('bibleVerseTab');
+const showBibleVerseTabBtn = document.getElementById('showBibleVerseTab');
+
+// Export/Import elements
+const exportSongsBtn = document.getElementById('exportSongsBtn');
+const importSongsBtn = document.getElementById('importSongsBtn');
+
+// Edit song modal elements
+const editSongModal = document.getElementById('editSongModal');
+const closeEditModal = document.getElementById('closeEditModal');
+const cancelEdit = document.getElementById('cancelEdit');
+const editSongTitle = document.getElementById('editSongTitle');
+const editSongContent = document.getElementById('editSongContent');
+const saveSongEdit = document.getElementById('saveSongEdit');
+const deleteSongBtn = document.getElementById('deleteSongBtn');
+const editStatus = document.getElementById('editStatus');
+
+let currentEditingSong = null;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -133,7 +151,9 @@ async function loadSongs() {
         // Load each song file
         const songPromises = songFiles.map(async (file) => {
             try {
-                const res = await fetch(`/songs/${file}`);
+                // Add cache-busting timestamp to force reload
+                const cacheBuster = `?t=${Date.now()}`;
+                const res = await fetch(`/songs/${file}${cacheBuster}`);
                 const song = await res.json();
                 song.filename = file;
                 return song;
@@ -173,8 +193,23 @@ function displaySongs(songsToDisplay) {
     songsToDisplay.forEach(song => {
         const songItem = document.createElement('div');
         songItem.className = 'song-item';
-        songItem.textContent = song.title;
-        songItem.addEventListener('click', () => selectSong(song));
+        
+        const songTitle = document.createElement('span');
+        songTitle.className = 'song-title';
+        songTitle.textContent = song.title;
+        songTitle.addEventListener('click', () => selectSong(song));
+        
+        const editBtn = document.createElement('button');
+        editBtn.className = 'song-edit-btn';
+        editBtn.innerHTML = '✏️';
+        editBtn.title = 'Edit song';
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openEditModal(song);
+        });
+        
+        songItem.appendChild(songTitle);
+        songItem.appendChild(editBtn);
         songList.appendChild(songItem);
     });
 }
@@ -186,7 +221,8 @@ function selectSong(song) {
     // Update selected state in list
     document.querySelectorAll('.song-item').forEach(item => {
         item.classList.remove('selected');
-        if (item.textContent === song.title) {
+        const titleSpan = item.querySelector('.song-title');
+        if (titleSpan && titleSpan.textContent === song.title) {
             item.classList.add('selected');
         }
     });
@@ -239,12 +275,25 @@ function displayPhrases(song) {
             // Add active class to clicked phrase
             phraseItem.classList.add('active');
             
+            // Get the next verse's first line for preview
+            let nextVersePreview = null;
+            if (index < song.phrases.length - 1) {
+                const nextPhrase = song.phrases[index + 1];
+                if (Array.isArray(nextPhrase) && nextPhrase.length > 0) {
+                    nextVersePreview = nextPhrase[0];
+                } else if (typeof nextPhrase === 'string') {
+                    // For old format, take the first line if it contains newlines
+                    nextVersePreview = nextPhrase.split('\n')[0];
+                }
+            }
+            
             // Send to projector
             sendToProjector({
                 type: 'song_phrase',
                 text: phraseText,
                 fontSize: currentFontSize,
-                songTitle: song.title
+                songTitle: song.title,
+                nextVersePreview: nextVersePreview
             });
         });
         phrasesSection.appendChild(phraseItem);
@@ -478,6 +527,76 @@ function setupEventListeners() {
             showImportStatus(`Error: ${error.message}`, 'error');
         }
     });
+    
+    // Bible tab - simple text button (same as Screens tab)
+    if (showBibleVerseTabBtn && bibleVerseTabInput) {
+        showBibleVerseTabBtn.addEventListener('click', () => {
+            const text = bibleVerseTabInput.value.trim();
+            if (text) {
+                sendToProjector({
+                    type: 'simple_slide',
+                    text: text,
+                    fontSize: currentFontSize
+                });
+                
+                // Clear active phrase
+                document.querySelectorAll('.phrase-item').forEach(p => {
+                    p.classList.remove('active');
+                });
+            }
+        });
+    }
+    
+    // Edit song modal handlers
+    if (closeEditModal) {
+        closeEditModal.addEventListener('click', closeEditModalFunc);
+    }
+    
+    if (cancelEdit) {
+        cancelEdit.addEventListener('click', closeEditModalFunc);
+    }
+    
+    if (saveSongEdit) {
+        saveSongEdit.addEventListener('click', saveEditedSong);
+    }
+    
+    if (deleteSongBtn) {
+        deleteSongBtn.addEventListener('click', deleteSong);
+    }
+    
+    // Close edit modal when clicking outside
+    if (editSongModal) {
+        editSongModal.addEventListener('click', (e) => {
+            if (e.target === editSongModal) {
+                closeEditModalFunc();
+            }
+        });
+    }
+    
+    // Export songs button
+    if (exportSongsBtn) {
+        exportSongsBtn.addEventListener('click', exportAllSongs);
+    }
+    
+    // Import songs button
+    if (importSongsBtn) {
+        importSongsBtn.addEventListener('click', () => {
+            // Create a file input element
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.json,application/json';
+            
+            fileInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    await importSongsFromFile(file);
+                }
+            });
+            
+            // Trigger file selection
+            fileInput.click();
+        });
+    }
 }
 
 // Parse bulk song input into structured song objects
@@ -607,4 +726,306 @@ function clearSongSelection() {
             <p>Open the menu and select a song to view its phrases</p>
         </div>
     `;
+}
+
+// Open edit modal
+function openEditModal(song) {
+    currentEditingSong = song;
+    
+    // Set title
+    editSongTitle.value = song.title;
+    
+    // Convert phrases to text format
+    let contentText = '';
+    song.phrases.forEach((phrase, index) => {
+        if (Array.isArray(phrase)) {
+            contentText += phrase.join('\n');
+        } else {
+            contentText += phrase;
+        }
+        
+        // Add blank line between verses (but not after the last one)
+        if (index < song.phrases.length - 1) {
+            contentText += '\n\n';
+        }
+    });
+    
+    editSongContent.value = contentText;
+    
+    // Show modal
+    editSongModal.classList.add('show');
+    editStatus.className = 'import-status';
+    editStatus.textContent = '';
+}
+
+// Close edit modal
+function closeEditModalFunc() {
+    editSongModal.classList.remove('show');
+    currentEditingSong = null;
+    editSongTitle.value = '';
+    editSongContent.value = '';
+    editStatus.className = 'import-status';
+    editStatus.textContent = '';
+}
+
+// Save edited song
+async function saveEditedSong() {
+    const newTitle = editSongTitle.value.trim();
+    const content = editSongContent.value.trim();
+    
+    console.log('Saving song:', { newTitle, content });
+    
+    if (!newTitle) {
+        showEditStatus('Please enter a song title.', 'error');
+        return;
+    }
+    
+    if (!content) {
+        showEditStatus('Please enter song content.', 'error');
+        return;
+    }
+    
+    // Parse content into phrases
+    const phrases = [];
+    const verses = content.split(/\n\s*\n/); // Split by blank lines
+    
+    verses.forEach(verse => {
+        const lines = verse.split('\n').map(line => line.trim()).filter(line => line);
+        if (lines.length > 0) {
+            phrases.push(lines);
+        }
+    });
+    
+    if (phrases.length === 0) {
+        showEditStatus('No valid verses found.', 'error');
+        return;
+    }
+    
+    const updatedSong = {
+        title: newTitle,
+        phrases: phrases
+    };
+    
+    console.log('Updated song object:', updatedSong);
+    console.log('Current editing song:', currentEditingSong);
+    
+    try {
+        showEditStatus('Saving changes...', 'info');
+        
+        const response = await fetch('/api/update-song', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                oldFilename: currentEditingSong.filename,
+                song: updatedSong
+            })
+        });
+        
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Server error response:', errorText);
+            throw new Error(`Server error: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('Result:', result);
+        
+        if (result.success) {
+            showEditStatus('Song updated successfully!', 'success');
+            
+            // Reload songs after a short delay
+            setTimeout(() => {
+                loadSongs();
+                closeEditModalFunc();
+                
+                // If this was the selected song, clear selection
+                if (selectedSong && selectedSong.filename === currentEditingSong.filename) {
+                    clearSongSelection();
+                }
+            }, 1500);
+        } else {
+            showEditStatus(`Error: ${result.message}`, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Save error:', error);
+        showEditStatus(`Error: ${error.message}`, 'error');
+    }
+}
+
+// Delete song
+async function deleteSong() {
+    if (!currentEditingSong) return;
+    
+    const confirmDelete = confirm(`Are you sure you want to delete "${currentEditingSong.title}"? This action cannot be undone.`);
+    
+    if (!confirmDelete) return;
+    
+    try {
+        showEditStatus('Deleting song...', 'info');
+        
+        const response = await fetch('/api/delete-song', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                filename: currentEditingSong.filename
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showEditStatus('Song deleted successfully!', 'success');
+            
+            // Reload songs after a short delay
+            setTimeout(() => {
+                loadSongs();
+                closeEditModalFunc();
+                
+                // If this was the selected song, clear selection
+                if (selectedSong && selectedSong.filename === currentEditingSong.filename) {
+                    clearSongSelection();
+                }
+            }, 1500);
+        } else {
+            showEditStatus(`Error: ${result.message}`, 'error');
+        }
+        
+    } catch (error) {
+        showEditStatus(`Error: ${error.message}`, 'error');
+    }
+}
+
+// Show edit status message
+function showEditStatus(message, type) {
+    editStatus.textContent = message;
+    editStatus.className = `import-status ${type}`;
+}
+
+// Export all songs to a JSON file
+function exportAllSongs() {
+    try {
+        if (songs.length === 0) {
+            alert('No songs to export!');
+            return;
+        }
+        
+        // Prepare songs data (without filename property)
+        const exportData = songs.map(song => ({
+            title: song.title,
+            phrases: song.phrases
+        }));
+        
+        // Create JSON string with pretty formatting
+        const jsonString = JSON.stringify(exportData, null, 2);
+        
+        // Create a blob
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        
+        // Create download link
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Generate filename with current date
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+        link.download = `church-songs-${dateStr}.json`;
+        
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        console.log(`Exported ${songs.length} songs successfully`);
+        
+    } catch (error) {
+        console.error('Error exporting songs:', error);
+        alert(`Error exporting songs: ${error.message}`);
+    }
+}
+
+// Import songs from a JSON file
+async function importSongsFromFile(file) {
+    try {
+        // Read the file
+        const fileContent = await file.text();
+        
+        // Parse JSON
+        let importedSongs;
+        try {
+            importedSongs = JSON.parse(fileContent);
+        } catch (parseError) {
+            alert('Invalid JSON file. Please select a valid songs JSON file.');
+            return;
+        }
+        
+        // Validate the data
+        if (!Array.isArray(importedSongs)) {
+            alert('Invalid file format. Expected an array of songs.');
+            return;
+        }
+        
+        if (importedSongs.length === 0) {
+            alert('No songs found in the file.');
+            return;
+        }
+        
+        // Validate each song has required fields
+        const validSongs = importedSongs.filter(song => {
+            return song.title && 
+                   song.phrases && 
+                   Array.isArray(song.phrases) && 
+                   song.phrases.length > 0;
+        });
+        
+        if (validSongs.length === 0) {
+            alert('No valid songs found in the file. Each song must have a title and phrases.');
+            return;
+        }
+        
+        // Ask for confirmation
+        const confirmImport = confirm(
+            `Found ${validSongs.length} valid song(s) in the file.\n\n` +
+            `Do you want to import them?\n\n` +
+            `Note: Songs with duplicate titles will be skipped.`
+        );
+        
+        if (!confirmImport) {
+            return;
+        }
+        
+        // Save songs using the existing API
+        const result = await saveSongs(validSongs);
+        
+        if (result.success) {
+            const message = 
+                `Successfully imported ${result.saved} song(s)!\n` +
+                (result.skipped > 0 ? `${result.skipped} song(s) skipped (already exist).` : '');
+            
+            alert(message);
+            
+            // Reload the song list
+            await loadSongs();
+        } else {
+            alert(`Error importing songs: ${result.message}`);
+        }
+        
+    } catch (error) {
+        console.error('Error importing songs:', error);
+        alert(`Error importing songs: ${error.message}`);
+    }
 }

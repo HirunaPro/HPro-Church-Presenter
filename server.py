@@ -59,6 +59,10 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         """Handle POST requests"""
         if self.path == '/api/save-songs':
             self.handle_save_songs()
+        elif self.path == '/api/update-song':
+            self.handle_update_song()
+        elif self.path == '/api/delete-song':
+            self.handle_delete_song()
         else:
             self.send_error(404, "Endpoint not found")
     
@@ -136,6 +140,167 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # Add .json extension
         filename = f"{filename}.json"
         return filename
+    
+    def handle_update_song(self):
+        """Handle updating a song"""
+        try:
+            print("[HTTP] ===== UPDATE SONG REQUEST =====")
+            
+            # Read the request body
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            data = json.loads(post_data.decode('utf-8'))
+            
+            print(f"[HTTP] Raw request data keys: {data.keys()}")
+            
+            old_filename = data.get('oldFilename')
+            song = data.get('song')
+            
+            print(f"[HTTP] Old filename (before decode): {old_filename}")
+            print(f"[HTTP] New title: {song.get('title') if song else 'N/A'}")
+            print(f"[HTTP] Number of phrases: {len(song.get('phrases', [])) if song else 0}")
+            
+            if not old_filename or not song:
+                raise ValueError("Missing required fields")
+            
+            # URL decode the filename (in case it contains Unicode characters)
+            from urllib.parse import unquote
+            old_filename = unquote(old_filename)
+            
+            print(f"[HTTP] Old filename (after decode): {old_filename}")
+            
+            songs_dir = Path('songs')
+            old_filepath = songs_dir / old_filename
+            
+            print(f"[HTTP] Old filepath: {old_filepath}")
+            print(f"[HTTP] File exists: {old_filepath.exists()}")
+            
+            # Check if old file exists
+            if not old_filepath.exists():
+                print(f"[HTTP] ERROR: File not found!")
+                print(f"[HTTP] Looking for: {old_filepath.absolute()}")
+                # List files in songs directory
+                print(f"[HTTP] Files in songs dir:")
+                for f in songs_dir.iterdir():
+                    print(f"[HTTP]   - {f.name}")
+                raise FileNotFoundError(f"Song file {old_filename} not found")
+            
+            # Generate new filename from new title
+            new_filename = self.generate_filename(song['title'])
+            new_filepath = songs_dir / new_filename
+            
+            print(f"[HTTP] New filename: {new_filename}")
+            print(f"[HTTP] Filenames match: {old_filename == new_filename}")
+            
+            # Save the song content for verification
+            print(f"[HTTP] Song content:")
+            print(f"[HTTP]   Title: {song['title']}")
+            print(f"[HTTP]   Phrases: {len(song['phrases'])} verses")
+            for i, phrase in enumerate(song['phrases']):
+                print(f"[HTTP]     Verse {i+1}: {len(phrase)} lines")
+            
+            # If title changed, delete old file
+            if old_filename != new_filename:
+                print(f"[HTTP] Title changed - deleting old file")
+                old_filepath.unlink()
+                print(f"[HTTP] Deleted old song file: {old_filename}")
+            else:
+                print(f"[HTTP] Title unchanged - overwriting same file")
+            
+            # Save updated song
+            print(f"[HTTP] Writing to: {new_filepath.absolute()}")
+            with open(new_filepath, 'w', encoding='utf-8') as f:
+                json.dump(song, f, indent=2, ensure_ascii=False)
+            
+            print(f"[HTTP] ✓ File written successfully!")
+            
+            # Verify the file was written
+            if new_filepath.exists():
+                file_size = new_filepath.stat().st_size
+                print(f"[HTTP] ✓ File exists, size: {file_size} bytes")
+            else:
+                print(f"[HTTP] ✗ WARNING: File does not exist after write!")
+            
+            print(f"[HTTP] ===== UPDATE COMPLETE =====")
+            
+            # Send response
+            response = {
+                'success': True,
+                'filename': new_filename
+            }
+            
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response).encode('utf-8'))
+            
+        except Exception as e:
+            print(f"[HTTP] ===== UPDATE FAILED =====")
+            print(f"[HTTP] Error: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            error_response = {
+                'success': False,
+                'message': str(e)
+            }
+            
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
+    
+    def handle_delete_song(self):
+        """Handle deleting a song"""
+        try:
+            # Read the request body
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            data = json.loads(post_data.decode('utf-8'))
+            
+            filename = data.get('filename')
+            
+            if not filename:
+                raise ValueError("Missing filename")
+            
+            # URL decode the filename (in case it contains Unicode characters)
+            from urllib.parse import unquote
+            filename = unquote(filename)
+            
+            songs_dir = Path('songs')
+            filepath = songs_dir / filename
+            
+            # Check if file exists
+            if not filepath.exists():
+                raise FileNotFoundError(f"Song file {filename} not found")
+            
+            # Delete the file
+            filepath.unlink()
+            print(f"[HTTP] Deleted song: {filename}")
+            
+            # Send response
+            response = {
+                'success': True,
+                'message': 'Song deleted successfully'
+            }
+            
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response).encode('utf-8'))
+            
+        except Exception as e:
+            print(f"[HTTP] Error deleting song: {e}")
+            error_response = {
+                'success': False,
+                'message': str(e)
+            }
+            
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
+
     
     def log_message(self, format, *args):
         # Custom logging
