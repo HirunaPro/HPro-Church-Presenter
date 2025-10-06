@@ -18,6 +18,7 @@ let currentContent = {
 // DOM Elements
 const connectionStatus = document.getElementById('connectionStatus');
 const songSearch = document.getElementById('songSearch');
+const searchClearBtn = document.getElementById('searchClearBtn');
 const songList = document.getElementById('songList');
 const phrasesSection = document.getElementById('phrasesSection');
 const currentDisplay = document.getElementById('currentDisplay');
@@ -362,6 +363,13 @@ function setupEventListeners() {
     songSearch.addEventListener('input', (e) => {
         const searchTerm = e.target.value;
         
+        // Toggle clear button visibility
+        if (searchTerm.length > 0) {
+            searchClearBtn.classList.add('visible');
+        } else {
+            searchClearBtn.classList.remove('visible');
+        }
+        
         // Use transliteration search if available, otherwise fall back to basic search
         let filteredSongs;
         if (typeof Transliteration !== 'undefined') {
@@ -376,6 +384,14 @@ function setupEventListeners() {
         }
         
         displaySongs(filteredSongs);
+    });
+    
+    // Clear search button
+    searchClearBtn.addEventListener('click', () => {
+        songSearch.value = '';
+        searchClearBtn.classList.remove('visible');
+        displaySongs(songs);
+        songSearch.focus();
     });
     
     // Font size buttons (both compact and regular)
