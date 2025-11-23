@@ -8,34 +8,132 @@ A simple, self-hosted web application for displaying song lyrics and simple slid
 
 This app supports **4 different deployment methods**. Choose one that fits your needs:
 
-### 1. 🖥️ Local Network (Recommended for On-Site)
+### Quick Reference Commands
+
+| Method            | Command                                                          | Cost      | Internet |
+| ----------------- | ---------------------------------------------------------------- | --------- | -------- |
+| **Local Network** | `start.bat` or `python3 src/server/server.py`                    | $0        | ❌ No     |
+| **Docker**        | `cd deployment/docker && docker-compose up`                      | $0        | ❌ No     |
+| **Azure Cloud**   | `.\deployment\azure\deploy-azure-container.ps1 -AppName "myapp"` | ~$0.57/mo | ✅ Yes    |
+| **Windows EXE**   | `.\deployment\pyinstaller\build-executable.ps1`                  | $0        | ❌ No     |
+
+---
+
+### Detailed Deployment Options
+
+#### 1. 🖥️ Local Network (Recommended for On-Site)
 Run on your local computer/network - perfect for on-site church services.
 
-**Setup:** `start.bat` (Windows) or `python3 src/server/server.py` (macOS/Linux)
+**Best for:** Church services where devices are on same WiFi
+
+**Setup:** 
+```bash
+# Windows
+start.bat
+
+# macOS/Linux
+python3 src/server/server.py
+```
+
+**Access:**
+```
+Landing Page:      http://localhost:8000/index.html
+Operator Control:  http://localhost:8000/operator.html
+Projector Display: http://localhost:8000/projector.html
+```
+
+**Cost:** $0 | **Internet:** Not needed | **Setup:** Easy
 
 👉 **[Local Deployment Guide](deployment/local/README.md)**
 
-### 2. 🐳 Docker Container (Recommended for Development)
+---
+
+#### 2. 🐳 Docker Container (Recommended for Development)
 Run in a containerized environment for consistency and isolation.
 
-**Setup:** `docker-compose up` (requires Docker)
+**Best for:** Testing and development with container isolation
+
+**Setup:** 
+```bash
+cd deployment/docker
+docker-compose up
+```
+
+**Cost:** $0 (Docker is free) | **Internet:** Not needed | **Setup:** Medium
+
+**Why Docker:**
+- ✅ **Consistent environment** - Same setup everywhere
+- ✅ **Isolation** - Doesn't affect your system
+- ✅ **Easy to test** - Before cloud deployment
+- ✅ **Development friendly** - Great for testing changes
+- ✅ **Multiple instances** - Run several at once
 
 👉 **[Docker Deployment Guide](deployment/docker/README.md)**
 
-### 3. ☁️ Azure Cloud (Recommended for Accessibility)
+---
+
+#### 3. ☁️ Azure Cloud (Recommended for Accessibility)
 Deploy to Azure Container Instances for internet access from anywhere.
 
-**Cost:** ~$0.57/month for 3 hours/week  
-**Setup:** One-command deployment  
+**Best for:** Remote access from anywhere with WebSocket support
+
+**Full WebSocket Support** - Perfect for this app! Deploy to Azure Container Instances with native WebSocket support.
+
+```powershell
+# Windows - One command deploy
+.\deployment\azure\deploy-azure-container.ps1 -AppName "mychurch-app"
+
+# Linux/Mac - One command deploy
+./deployment\azure\deploy-azure-container.sh --app-name "mychurch-app"
+```
+
+**Cost:** ~$0.57/month (3 hrs/week) | **Internet:** Required | **Setup Time:** 5 minutes
+
+**Why Container Instances:**
+- ✅ **Full WebSocket Support** - Native ws:// protocol support
+- ✅ **Pay-per-second** - Only $0.57/month for weekly use (3hr/week)
+- ✅ **No quota issues** - Different quota from App Service
+- ✅ **Easy start/stop** - Save money when not in use
+- ✅ **5-minute deployment** - Fast and simple
 
 👉 **[Azure Deployment Guide](deployment/azure/README.md)**
 
-### 4. 📦 Windows Executable (PyInstaller)
+---
+
+#### 4. 📦 Windows Executable (PyInstaller)
 Create a standalone `.exe` file - no Python installation needed.
 
-**Setup:** `build\build-executable.ps1`
+**Best for:** Distribution to other PCs
+
+```powershell
+cd .\deployment\pyinstaller
+.\build-executable.ps1
+```
+
+**Creates:** `dist/ChurchApp.exe` | **Size:** ~50MB | **Platforms:** Windows only
+
+**Use Case:**
+- Distributing to churches without technical staff
+- Running without Python installation
+- Portable USB installation
 
 👉 **[PyInstaller Build Guide](deployment/pyinstaller/README.md)**
+
+---
+
+## Deployment Comparison
+
+| Feature               | Local Network    | Docker              | Azure Cloud   | Windows EXE  |
+| --------------------- | ---------------- | ------------------- | ------------- | ------------ |
+| **Setup Difficulty**  | Easy             | Medium              | Medium        | Medium       |
+| **Monthly Cost**      | $0               | $0                  | $0.57-$1.14   | $0           |
+| **Internet Required** | No               | No                  | Yes           | No           |
+| **Network Range**     | Local WiFi       | Local WiFi          | Global        | Local WiFi   |
+| **Python Needed**     | Yes              | No (Docker)         | No            | No           |
+| **Startup Time**      | Fast             | Normal              | Normal        | Slow         |
+| **Best For**          | On-site services | Development/Testing | Remote access | Distribution |
+| **Scaling**           | Manual           | Easy                | Automatic     | No           |
+| **Production Ready**  | ⚠️ Limited        | ✅ Good              | ✅ Excellent   | ⚠️ Limited    |
 
 ---
 
@@ -50,6 +148,8 @@ Create a standalone `.exe` file - no Python installation needed.
 - **Simple Slides**: Pre-defined slides for welcome, sermon, prayer, announcements, and custom text
 - **Customizable**: Adjustable font sizes, church name, and logo
 - **No Internet Required**: Runs completely offline once set up
+
+---
 
 ## System Requirements
 
@@ -107,98 +207,6 @@ cd .\deployment\pyinstaller
 ```
 
 This creates a `dist` folder with the executable. See `deployment/pyinstaller/README.md` for details.
-
-## Deployment Options
-
-### Option 1: Local Network (Recommended for On-Site)
-
-Run on your local computer/network - perfect for on-site church services.
-
-**Setup Instructions:**
-1. Install Python 3.7+ (with "Add to PATH" checked)
-2. Install dependencies: `pip install websockets`
-3. Run server: `start.bat` (Windows) or `python3 src/server/server.py` (macOS/Linux)
-4. Open browser → `http://localhost:8000/index.html`
-5. On projector PC: `http://<your-ip>:8000/projector.html`
-
-**See [Local Deployment Guide](deployment/local/README.md) for detailed instructions.**
-
----
-
-### Option 2: Docker Container (Recommended for Development)
-
-Run in Docker for consistency, isolation, and easy testing.
-
-```bash
-cd deployment/docker
-docker-compose up
-```
-
-**Why Docker:**
-- ✅ **Consistent environment** - Same setup everywhere
-- ✅ **Isolation** - Doesn't affect your system
-- ✅ **Easy to test** - Before cloud deployment
-- ✅ **Development friendly** - Great for testing changes
-- ✅ **Multiple instances** - Run several at once
-
-**See [Docker Deployment Guide](deployment/docker/README.md) for complete instructions.**
-
----
-
-### Option 3: Azure Container Instances (Recommended for Cloud) ⭐
-
-**Full WebSocket Support** - Perfect for this app! Deploy to Azure Container Instances with native WebSocket support.
-
-```powershell
-# Windows - One command deploy
-.\deployment\azure\deploy-azure-container.ps1 -AppName "mychurch-app"
-
-# Linux/Mac - One command deploy
-./deployment/azure/deploy-azure-container.sh --app-name "mychurch-app"
-```
-
-**Why Container Instances:**
-- ✅ **Full WebSocket Support** - Native ws:// protocol support
-- ✅ **Pay-per-second** - Only $0.57/month for weekly use (3hr/week)
-- ✅ **No quota issues** - Different quota from App Service
-- ✅ **Easy start/stop** - Save money when not in use
-- ✅ **5-minute deployment** - Fast and simple
-
-**See [Azure Deployment Guide](deployment/azure/README.md) for complete instructions.**
-
----
-
-### Option 4: Windows Executable (PyInstaller)
-
-Create a standalone `.exe` file - no Python installation needed.
-
-```powershell
-cd .\deployment\pyinstaller
-.\build-executable.ps1
-```
-
-**Use Case:**
-- Distributing to churches without technical staff
-- Running without Python installation
-- Portable USB installation
-
-**See [PyInstaller Build Guide](deployment/pyinstaller/README.md) for complete instructions.**
-
----
-
-## Deployment Comparison
-
-| Feature | Local Network | Docker | Azure Cloud | Windows EXE |
-|---------|---------------|--------|------------|------------|
-| **Setup Difficulty** | Easy | Medium | Medium | Medium |
-| **Monthly Cost** | $0 | $0 | $0.57-$1.14 | $0 |
-| **Internet Required** | No | No | Yes | No |
-| **Network Range** | Local WiFi | Local WiFi | Global | Local WiFi |
-| **Python Needed** | Yes | No (Docker) | No | No |
-| **Startup Time** | Fast | Normal | Normal | Slow |
-| **Best For** | On-site services | Development/Testing | Remote access | Distribution |
-| **Scaling** | Manual | Easy | Automatic | No |
-| **Production Ready** | ⚠️ Limited | ✅ Good | ✅ Excellent | ⚠️ Limited |
 
 ---
 
@@ -544,4 +552,4 @@ This application is provided as-is for church use. Feel free to modify and distr
 
 ## Version
 
-Version 2.0 - October 2025 (Restructured deployment methods)
+Version 1.2 - 23-11-2025 (Restructured deployment methods)
