@@ -4,21 +4,38 @@ A simple, self-hosted web application for displaying song lyrics and simple slid
 
 ---
 
-## 🚀 Quick Start (TL;DR)
+## 🚀 Quick Start - Choose Your Deployment Method
 
-**First time:**
-1. Install Python (with "Add to PATH" checked)
-2. Open terminal in project folder
-3. Run: `pip install websockets`
+This app supports **4 different deployment methods**. Choose one that fits your needs:
 
-**Every time:**
-1. Open terminal in project folder
-2. Run: `python server.py`
-3. Open browser → `http://localhost:8000/index.html`
-4. Click "Open Operator Control" and "Open Projector Display"
-5. Press F11 on projector for full-screen
+### 1. 🖥️ Local Network (Recommended for On-Site)
+Run on your local computer/network - perfect for on-site church services.
 
-**See [QUICK-START.md](QUICK-START.md) for detailed step-by-step guide.**
+**Setup:** `start.bat` (Windows) or `python3 src/server/server.py` (macOS/Linux)
+
+👉 **[Local Deployment Guide](deployment/local/README.md)**
+
+### 2. 🐳 Docker Container (Recommended for Development)
+Run in a containerized environment for consistency and isolation.
+
+**Setup:** `docker-compose up` (requires Docker)
+
+👉 **[Docker Deployment Guide](deployment/docker/README.md)**
+
+### 3. ☁️ Azure Cloud (Recommended for Accessibility)
+Deploy to Azure Container Instances for internet access from anywhere.
+
+**Cost:** ~$0.57/month for 3 hours/week  
+**Setup:** One-command deployment  
+
+👉 **[Azure Deployment Guide](deployment/azure/README.md)**
+
+### 4. 📦 Windows Executable (PyInstaller)
+Create a standalone `.exe` file - no Python installation needed.
+
+**Setup:** `build\build-executable.ps1`
+
+👉 **[PyInstaller Build Guide](deployment/pyinstaller/README.md)**
 
 ---
 
@@ -71,8 +88,25 @@ start.bat
 Run the Python server directly:
 
 ```bash
-python3 server.py
+python3 src/server/server.py
 ```
+
+Or use the provided startup script:
+
+```bash
+./startup.sh
+```
+
+### Windows Standalone Executable (No Python Required)
+
+Build a standalone Windows executable that doesn't require Python installation:
+
+```powershell
+cd .\deployment\pyinstaller
+.\build-executable.ps1
+```
+
+This creates a `dist` folder with the executable. See `deployment/pyinstaller/README.md` for details.
 
 ## Deployment Options
 
@@ -80,18 +114,47 @@ python3 server.py
 
 Run on your local computer/network - perfect for on-site church services.
 
-**See instructions below** in the "Usage" section.
+**Setup Instructions:**
+1. Install Python 3.7+ (with "Add to PATH" checked)
+2. Install dependencies: `pip install websockets`
+3. Run server: `start.bat` (Windows) or `python3 src/server/server.py` (macOS/Linux)
+4. Open browser → `http://localhost:8000/index.html`
+5. On projector PC: `http://<your-ip>:8000/projector.html`
 
-### Option 2: Azure Container Instances (Recommended for Cloud) ⭐
+**See [Local Deployment Guide](deployment/local/README.md) for detailed instructions.**
+
+---
+
+### Option 2: Docker Container (Recommended for Development)
+
+Run in Docker for consistency, isolation, and easy testing.
+
+```bash
+cd deployment/docker
+docker-compose up
+```
+
+**Why Docker:**
+- ✅ **Consistent environment** - Same setup everywhere
+- ✅ **Isolation** - Doesn't affect your system
+- ✅ **Easy to test** - Before cloud deployment
+- ✅ **Development friendly** - Great for testing changes
+- ✅ **Multiple instances** - Run several at once
+
+**See [Docker Deployment Guide](deployment/docker/README.md) for complete instructions.**
+
+---
+
+### Option 3: Azure Container Instances (Recommended for Cloud) ⭐
 
 **Full WebSocket Support** - Perfect for this app! Deploy to Azure Container Instances with native WebSocket support.
 
 ```powershell
 # Windows - One command deploy
-.\deploy-azure-container.ps1 -AppName "mychurch-app"
+.\deployment\azure\deploy-azure-container.ps1 -AppName "mychurch-app"
 
 # Linux/Mac - One command deploy
-./deploy-azure-container.sh --app-name "mychurch-app"
+./deployment/azure/deploy-azure-container.sh --app-name "mychurch-app"
 ```
 
 **Why Container Instances:**
@@ -101,41 +164,41 @@ Run on your local computer/network - perfect for on-site church services.
 - ✅ **Easy start/stop** - Save money when not in use
 - ✅ **5-minute deployment** - Fast and simple
 
-**Documentation:**
-- 🚀 **Quick Start:** [docs/AZURE-CONTAINER-QUICKSTART.md](docs/AZURE-CONTAINER-QUICKSTART.md) - Deploy in 5 minutes
-- 📘 **Full Guide:** [docs/AZURE-CONTAINER-DEPLOYMENT.md](docs/AZURE-CONTAINER-DEPLOYMENT.md) - Complete reference
+**See [Azure Deployment Guide](deployment/azure/README.md) for complete instructions.**
 
-**Pricing:**
-- 3 hours/week (Sundays): **$0.57/month** ⭐
-- 6 hours/week (Sun + Wed): **$1.14/month**
-- 24/7: ~$35/month
+---
 
-### Option 3: Azure App Service (Alternative)
+### Option 4: Windows Executable (PyInstaller)
 
-Deploy to Azure App Service (requires WebSocket configuration).
+Create a standalone `.exe` file - no Python installation needed.
 
 ```powershell
-# Windows - One command deploy
-.\deploy-to-azure-v2.ps1 -AppName "mychurch-app"
-
-# Linux/Mac - One command deploy  
-./deploy-to-azure-v2.sh --app-name "mychurch-app"
+cd .\deployment\pyinstaller
+.\build-executable.ps1
 ```
 
-**Features:**
-- 🆓 **Free tier available** - $0/month (with limitations)
-- ⚡ **Fast deployment** - 2-3 minutes
-- 🌍 **Access from anywhere** - Internet-based
-- 📊 **Cost optimization** - Start/stop scripts included
+**Use Case:**
+- Distributing to churches without technical staff
+- Running without Python installation
+- Portable USB installation
 
-**Documentation:**
-- 📘 **Quick Deploy:** [docs/AZURE-QUICK-DEPLOY.md](docs/AZURE-QUICK-DEPLOY.md)
-- 📗 **Full Guide:** [docs/AZURE-DEPLOYMENT-V2.md](docs/AZURE-DEPLOYMENT-V2.md)
+**See [PyInstaller Build Guide](deployment/pyinstaller/README.md) for complete instructions.**
 
-**Pricing:**
-- Free (F1): $0/month - Limited (may have WebSocket issues)
-- Basic (B1): ~$13/month (or $0.43/month with start/stop)
-- Standard (S1): ~$69/month (auto-scaling, SSL)
+---
+
+## Deployment Comparison
+
+| Feature | Local Network | Docker | Azure Cloud | Windows EXE |
+|---------|---------------|--------|------------|------------|
+| **Setup Difficulty** | Easy | Medium | Medium | Medium |
+| **Monthly Cost** | $0 | $0 | $0.57-$1.14 | $0 |
+| **Internet Required** | No | No | Yes | No |
+| **Network Range** | Local WiFi | Local WiFi | Global | Local WiFi |
+| **Python Needed** | Yes | No (Docker) | No | No |
+| **Startup Time** | Fast | Normal | Normal | Slow |
+| **Best For** | On-site services | Development/Testing | Remote access | Distribution |
+| **Scaling** | Manual | Easy | Automatic | No |
+| **Production Ready** | ⚠️ Limited | ✅ Good | ✅ Excellent | ⚠️ Limited |
 
 ---
 
@@ -210,11 +273,11 @@ The connection indicator shows:
 
 ## Adding Songs
 
-Songs are stored as JSON files in the `songs/` directory.
+Songs are stored as JSON files in the `src/songs/` directory.
 
 ### Song File Format (Multi-Line Verses)
 
-The app now supports displaying multiple lines at once (4-6 lines per verse). Create a new `.json` file in the `songs/` folder:
+The app now supports displaying multiple lines at once (4-6 lines per verse). Create a new `.json` file in the `src/songs/` folder:
 
 ```json
 {
@@ -247,7 +310,7 @@ The app now supports displaying multiple lines at once (4-6 lines per verse). Cr
 }
 ```
 
-**See [MULTI-LINE-SONG-FORMAT.md](MULTI-LINE-SONG-FORMAT.md) for detailed guide and examples.**
+**See [MULTI-LINE-SONG-FORMAT.md](docs/MULTI-LINE-SONG-FORMAT.md) for detailed guide and examples.**
 
 ### Naming Convention
 - Use lowercase letters
@@ -256,7 +319,7 @@ The app now supports displaying multiple lines at once (4-6 lines per verse). Cr
 
 ### Example
 
-File: `songs/joyful-joyful.json`
+File: `src/songs/joyful-joyful.json`
 
 ```json
 {
@@ -284,7 +347,7 @@ After adding a song file, refresh the operator page to load it.
 
 ### Change Church Name
 
-Edit `js/operator.js` and find this line:
+Edit `src/static/js/operator.js` and find this line:
 
 ```javascript
 const CHURCH_NAME = "Our Church"; // Configurable
@@ -294,15 +357,15 @@ Change `"Our Church"` to your church's name.
 
 ### Change Church Logo
 
-Replace `images/church-logo.png` with your own logo image. Recommended size: 150x150 pixels.
+Replace `src/static/images/church-logo.png` with your own logo image. Recommended size: 150x150 pixels.
 
 ### Modify Default Welcome Message
 
-Edit `js/operator.js` and `js/projector.js` to change the default welcome message.
+Edit `src/static/js/operator.js` and `src/static/js/projector.js` to change the default welcome message.
 
 ### Customize Slide Messages
 
-In `js/operator.js`, find the slide button event handlers to modify default slide text:
+In `src/static/js/operator.js`, find the slide button event handlers to modify default slide text:
 
 ```javascript
 case 'welcome':
@@ -313,41 +376,26 @@ case 'welcome':
 ## Troubleshooting
 
 ### Connection Issues
-
-**Operator shows "Disconnected"**
-- Check that the server is running
-- Verify the WebSocket port (8765) is not blocked by firewall
-- Refresh the page
-
-**Projector not receiving updates**
-- Ensure both devices are on the same WiFi network
-- Check the WebSocket connection in browser console (F12)
-- Verify the IP address is correct
+- **"Disconnected"** → Check server is running, verify WiFi connection, restart browser
+- **Can't access from other PC** → Run firewall config or allow in Windows Defender
+- **WebSocket fails** → Check ports 8000 & 8765 not blocked by firewall
 
 ### Songs Not Loading
+- Check `songs/` directory has `.json` files
+- Verify JSON syntax (use JSON validator)
+- Refresh browser page
+- Check browser console (F12) for errors
 
-- Check that song files are in the `songs/` directory
-- Verify JSON syntax is correct (use a JSON validator)
-- Check browser console for errors (F12)
-- Ensure song files have `.json` extension
+### Server Issues
+- **"Python not recognized"** → Install Python, check "Add to PATH", restart terminal
+- **"Module websockets not found"** → Run: `pip install websockets`
+- **"Port already in use"** → Change ports in `server.py` or restart server
 
-### Python/Server Issues
+### Docker Issues
+- **"Docker not running"** → Start Docker Desktop, wait for whale icon
+- **"Port already in use"** → Run: `az container restart --name mychurch-app --resource-group [rg-name]`
 
-**"Python is not recognized"**
-- Install Python from python.org
-- Make sure "Add to PATH" was checked during installation
-- Restart your terminal/command prompt
-
-**"Module 'websockets' not found"**
-- Run: `pip install websockets`
-- Or use the included `start.bat` which installs it automatically
-
-**Port already in use**
-- Change the port in `server.py`:
-  ```python
-  HTTP_PORT = 8000  # Change to different port
-  WEBSOCKET_PORT = 8765  # Change to different port
-  ```
+See `docs/` folder for complete troubleshooting guides.
 
 ## Network Setup
 
@@ -386,29 +434,52 @@ If other devices can't connect:
 
 ```
 PresentationApp/
-├── index.html              # Landing page
-├── operator.html           # Operator control interface
-├── projector.html          # Projector display
-├── server.py               # Python WebSocket server
-├── start.bat               # Windows startup script
-├── Requirements.md         # Project requirements
-├── README.md              # This file
-├── SINGLISH-SEARCH-GUIDE.md # Singlish search documentation
-├── MULTI-LINE-SONG-FORMAT.md # Song format guide
-├── css/
-│   └── style.css          # Stylesheet
-├── js/
-│   ├── operator.js        # Operator control logic
-│   ├── projector.js       # Projector display logic
-│   └── transliteration.js # Singlish search module
-├── images/
-│   └── church-logo.png    # Church logo
-└── songs/
-    ├── amazing-grace.json
-    ├── blessed-assurance.json
-    ├── how-great-thou-art.json
-    ├── ඔබ-දවය-පමල.json    # Sinhala song example
-    └── என்-இயேசுவே.json    # Tamil song example
+├── src/                          # Source code
+│   ├── static/                   # Web interface files
+│   │   ├── index.html           # Landing page
+│   │   ├── operator.html        # Operator control interface
+│   │   ├── projector.html       # Projector display
+│   │   ├── css/
+│   │   │   └── style.css        # Stylesheet
+│   │   ├── js/
+│   │   │   ├── operator.js      # Operator control logic
+│   │   │   ├── projector.js     # Projector display logic
+│   │   │   └── transliteration.js # Singlish search module
+│   │   └── images/
+│   │       └── church-logo.png  # Church logo
+│   ├── server/                   # Server code
+│   │   ├── server.py            # Main WebSocket & HTTP server
+│   │   └── server-optimized.py  # Optimized for Azure
+│   └── songs/                    # Song library (JSON files)
+│       ├── amazing-grace.json
+│       ├── blessed-assurance.json
+│       └── ...
+├── deployment/                   # Deployment methods
+│   ├── local/                    # Local network deployment
+│   │   └── README.md
+│   ├── docker/                   # Docker container deployment
+│   │   ├── README.md
+│   │   ├── Dockerfile            # Docker image definition
+│   │   └── docker-compose.yml    # Multi-container setup
+│   ├── azure/                    # Azure Cloud deployment
+│   │   ├── README.md
+│   │   ├── deploy-azure-container.ps1
+│   │   ├── deploy-azure-container.sh
+│   │   └── ... (other Azure scripts)
+│   └── pyinstaller/              # Windows executable build
+│       ├── README.md
+│       ├── build-executable.ps1
+│       └── ... (build files)
+├── docs/                         # Documentation
+│   ├── PROJECT-STRUCTURE.md      # Detailed file structure
+│   ├── QUICK-START.md            # Getting started guide
+│   ├── SINGLISH-SEARCH-GUIDE.md  # Search documentation
+│   ├── MULTI-LINE-SONG-FORMAT.md # Song format guide
+│   └── ... (other documentation)
+├── start.bat                     # Windows startup script
+├── startup.sh                    # Linux/macOS startup script
+├── requirements.txt              # Python dependencies
+└── README.md                     # This file
 ```
 
 ## Technical Details
@@ -452,10 +523,20 @@ Messages sent from operator to projector:
 This is a simple, self-contained application. All files are included and can be modified to suit your needs.
 
 For custom features or modifications:
-- HTML files: Structure and content
-- CSS files: Styling and appearance  
-- JavaScript files: Functionality and behavior
-- Python files: Server and WebSocket communication
+- **HTML files** (`src/static/*.html`): Structure and content
+- **CSS files** (`src/static/css/`): Styling and appearance  
+- **JavaScript files** (`src/static/js/`): Functionality and behavior
+- **Python files** (`src/server/`): Server and WebSocket communication
+
+## Documentation & Resources
+
+- 🚀 **[Local Deployment Guide](deployment/local/README.md)** - Run on your network
+- 🐳 **[Docker Deployment Guide](deployment/docker/README.md)** - Containerized deployment
+- ☁️ **[Azure Deployment Guide](deployment/azure/README.md)** - Deploy to cloud
+- 📦 **[PyInstaller Build Guide](deployment/pyinstaller/README.md)** - Create standalone EXE
+- 📘 **[Singlish Search Guide](docs/SINGLISH-SEARCH-GUIDE.md)** - Search in multiple languages
+- 📋 **[Song Format Guide](docs/MULTI-LINE-SONG-FORMAT.md)** - Create and edit songs
+- 📁 **[Project Structure](docs/PROJECT-STRUCTURE.md)** - Detailed file organization
 
 ## License
 
@@ -463,4 +544,4 @@ This application is provided as-is for church use. Feel free to modify and distr
 
 ## Version
 
-Version 1.0 - Created October 2025
+Version 2.0 - October 2025 (Restructured deployment methods)

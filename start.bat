@@ -39,7 +39,7 @@ echo.
 echo ============================================================
 echo.
 
-REM Start the server
-python server.py
+REM Start the server from the new location
+python src\server\server.py
 
 pause

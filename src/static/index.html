@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Church Presentation App - Worship Service Display System">
+    <title>Church Presentation App</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="landing-container">
+        <div class="landing-header">
+            <h1>Church Presentation App</h1>
+            <p>Worship Service Display System</p>
+        </div>
+        
+        <div class="landing-buttons">
+            <a href="operator.html" class="landing-button operator">
+                Open Operator Control
+            </a>
+            <a href="projector.html" class="landing-button projector">
+                Open Projector Display
+            </a>
+        </div>
+        
+        <div class="landing-info">
+            <h3>Access Instructions</h3>
+            <p>This application is running on:</p>
+            <div class="ip-address" id="ipAddress">Loading...</div>
+            <p>To access from other devices on the same WiFi network:</p>
+            <p>1. Connect to the same WiFi network</p>
+            <p>2. Open a web browser</p>
+            <p>3. Navigate to the address shown above</p>
+            <p style="margin-top: 20px; font-size: 0.9em; color: #666;">
+                <strong>Tip:</strong> Open the Operator Control on this device and 
+                the Projector Display on the device connected to the projector.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Get and display local IP address
+        async function getLocalIP() {
+            try {
+                // Attempt to fetch from server (if server provides this endpoint)
+                // For now, we'll show the current location
+                const currentURL = window.location.href.replace('index.html', '');
+                document.getElementById('ipAddress').textContent = currentURL;
+                
+                // Also try to detect actual IP
+                const response = await fetch('/server-info.json').catch(() => null);
+                if (response && response.ok) {
+                    const data = await response.json();
+                    document.getElementById('ipAddress').textContent = 
+                        `http://${data.ip}:${data.port}/index.html`;
+                }
+            } catch (error) {
+                // Fallback to showing current location
+                const currentURL = window.location.href;
+                document.getElementById('ipAddress').textContent = currentURL;
+            }
+        }
+
+        // Load IP on page load
+        getLocalIP();
+    </script>
+</body>
+</html>

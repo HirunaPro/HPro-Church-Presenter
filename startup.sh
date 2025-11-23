@@ -1,10 +1,10 @@
 #!/bin/bash
-# Azure App Service startup script
-# This script is executed when the app starts on Azure
+# Church Presentation App startup script
+# Local network deployment for macOS/Linux
 
-echo "Starting Church Presentation App on Azure..."
+echo "Starting Church Presentation App..."
 echo "Installing Python dependencies..."
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 
 echo "Starting Python server..."
-python server.py
+python3 src/server/server.py

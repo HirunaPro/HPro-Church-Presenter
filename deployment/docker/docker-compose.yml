@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  church-presenter:
+    build: .
+    container_name: church-presentation-app
+    ports:
+      - "8000:8000"  # HTTP
+      - "8765:8765"  # WebSocket
+    environment:
+      - PORT=8000
+      - HTTP_PORT=8000
+      - WEBSOCKET_PORT=8765
+    volumes:
+      - ./src/songs:/app/src/songs  # Mount songs directory for easy updates
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/index.html')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s

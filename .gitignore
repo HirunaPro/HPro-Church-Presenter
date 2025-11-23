@@ -42,3 +42,8 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+
+# Build artifacts
+build/ChurchApp-Standalone/
+build/dist/
+*.spec

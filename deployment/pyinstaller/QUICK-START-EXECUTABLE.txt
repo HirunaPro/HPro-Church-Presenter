@@ -1,0 +1,99 @@
+# Quick Start - For End Users
+
+## What is This?
+
+This is a Church Presentation App - a tool to display song lyrics and slides during worship services.
+
+**IMPORTANT: No Installation Needed!** Just run `START.bat`
+
+---
+
+## First Time Setup (2 Minutes)
+
+### Step 1: Run Setup
+1. Double-click `SETUP.bat`
+2. Wait for it to complete
+3. Note your **IP Address** shown on screen (e.g., 192.168.1.100)
+
+### Step 2: Test It
+1. Double-click `START.bat`
+2. Wait 2-3 seconds
+3. Browser opens automatically
+4. You're ready to go!
+
+### Step 3: Share with Others
+Give other computers on your network your IP address:
+- Example: `http://192.168.1.100:8000`
+
+---
+
+## Using the App
+
+### On Your Computer (Operator)
+1. Run `START.bat`
+2. Click "Open Operator Control"
+3. Search for songs, click to select
+4. Click song verses to display on projector
+
+### On Projector Computer
+1. Make sure your PC is running `START.bat`
+2. On projector computer, open browser
+3. Go to: `http://[YOUR-IP]:8000/projector.html`
+4. Press `F11` for full-screen
+5. You're ready for the service!
+
+---
+
+## Finding Your IP Address
+
+If you forgot your IP:
+
+**Windows:**
+- Open Command Prompt
+- Type: `ipconfig`
+- Look for "IPv4 Address" (e.g., 192.168.1.100)
+
+---
+
+## Troubleshooting
+
+### It won't start
+- Make sure all files are in the same folder
+- Try right-click START.bat → Run as Administrator
+- Delete any files named "Church-Presentation-Server.exe.lock"
+
+### Can't connect from other computers
+1. Make sure both computers on same WiFi
+2. Check you're using correct IP address
+3. Make sure server PC is still running START.bat
+4. Check Windows Firewall (see below)
+
+### Firewall is blocking it
+1. Open **Windows Defender Firewall**
+2. Click **"Allow an app through firewall"**
+3. Click **"Allow another app"**
+4. Browse to and select **Church-Presentation-Server.exe**
+5. Click OK
+
+---
+
+## Tips
+
+✓ **Before service:** Test with a few songs  
+✓ **Keep operator PC on:** Don't let it go to sleep  
+✓ **Use F11 on projector:** Full-screen mode looks better  
+✓ **Bookmark the URL:** `http://localhost:8000/operator.html`  
+✓ **Pre-load songs:** Add them to songs/ folder before service  
+
+---
+
+## Need Help?
+
+See:
+- `README.txt` - Detailed instructions
+- `PYINSTALLER-GUIDE.md` - Advanced setup
+- Original project README - Full documentation
+
+---
+
+That's it! Enjoy your presentation app. 🙏
