@@ -305,7 +305,3 @@ Check these files for reference:
 4. **Consistency** - Keep verse length consistent within each song
 5. **Backup** - Keep a backup of your original song files
 
----
-
-**Updated:** October 2025
-**Version:** 2.0 - Multi-line verse support
