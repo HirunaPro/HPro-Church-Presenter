@@ -2,6 +2,7 @@
 
 // Configuration
 const DEFAULT_WS_PORT = 8765;
+const FADE_MS = 200; // keep in sync with --pj-fade in projector.css
 
 async function getWebSocketUrl() {
     let wsPort = DEFAULT_WS_PORT;
@@ -74,7 +75,7 @@ function showWelcomeScreen() {
         setTimeout(() => {
             iframe.style.opacity = '1';
         }, 100);
-    }, 500);
+    }, FADE_MS);
 }
 
 // WebSocket Connection
@@ -146,7 +147,7 @@ function updateDisplay(content) {
             setTimeout(() => {
                 iframe.style.opacity = '1';
             }, 100);
-        }, 500);
+        }, FADE_MS);
         
         return;
     }
@@ -169,7 +170,7 @@ function updateDisplay(content) {
             
             // Hide song title for blank screen
             songTitleDisplay.classList.remove('visible');
-        }, 500); // Wait for fade out
+        }, FADE_MS); // Wait for fade out
         
         return;
     } else {
@@ -190,9 +191,11 @@ function updateDisplay(content) {
             projectorContent.textContent = content.text;
         }
         
-        // Update font size
+        // Update font size; clear any size left over from auto mode
         projectorContent.className = 'projector-content';
         projectorContent.classList.add(newFontClass);
+        projectorContent.style.fontSize = '';
+        projectorContent.style.lineHeight = '';
         
         // If auto font size, calculate optimal size
         if (isAutoFont) {
@@ -227,7 +230,7 @@ function updateDisplay(content) {
             projectorContent.classList.add('fade-in');
         }, 50); // Small delay before fade in
         
-    }, 500); // Duration matches fade-out transition (0.5s)
+    }, FADE_MS);
 }
 
 // Calculate and apply the optimal font size for auto mode
@@ -245,9 +248,9 @@ function calculateAutoFontSize() {
     const nextVerseHeight = nextVersePreview.classList.contains('visible') ? 
         nextVersePreview.offsetHeight + 20 : 0;
     
-    // More generous padding to prevent cropping
-    const paddingHorizontal = 100; // Left and right padding combined
-    const paddingVertical = 80; // Top and bottom padding
+    const containerStyle = getComputedStyle(projectorContainer);
+    const paddingHorizontal = parseFloat(containerStyle.paddingLeft) + parseFloat(containerStyle.paddingRight);
+    const paddingVertical = parseFloat(containerStyle.paddingTop) + parseFloat(containerStyle.paddingBottom);
     
     const availableWidth = containerWidth - paddingHorizontal;
     const availableHeight = containerHeight - songTitleHeight - nextVerseHeight - paddingVertical;
@@ -267,6 +270,10 @@ function calculateAutoFontSize() {
         padding: 0;
         margin: 0;
     `;
+    const contentStyle = getComputedStyle(projectorContent);
+    tempElement.style.fontFamily = contentStyle.fontFamily;
+    tempElement.style.fontWeight = contentStyle.fontWeight;
+    tempElement.style.letterSpacing = contentStyle.letterSpacing;
     tempElement.textContent = projectorContent.textContent;
     document.body.appendChild(tempElement);
     
@@ -274,7 +281,7 @@ function calculateAutoFontSize() {
     while (maxFontSize - minFontSize > 1) {
         const fontSize = Math.floor((minFontSize + maxFontSize) / 2);
         tempElement.style.fontSize = fontSize + 'px';
-        tempElement.style.lineHeight = '1.2';
+        tempElement.style.lineHeight = '1.25';
         
         const textWidth = tempElement.offsetWidth;
         const textHeight = tempElement.offsetHeight;
@@ -293,11 +300,19 @@ function calculateAutoFontSize() {
     
     // Apply the calculated font size with inline styles
     projectorContent.style.fontSize = bestFontSize + 'px';
-    projectorContent.style.lineHeight = '1.2';
-    
-    console.log('Auto font size:', bestFontSize, 'px', 
-                'Available space:', availableWidth, 'x', availableHeight);
+    projectorContent.style.lineHeight = '1.25';
 }
+
+// Refit auto-sized text when the window or fullscreen state changes
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+        if (projectorContent.classList.contains('font-auto')) calculateAutoFontSize();
+    }, 150);
+});
+
+document.addEventListener('dblclick', toggleFullscreen);
 
 // Allow F11 key for fullscreen
 document.addEventListener('keydown', (e) => {
