@@ -71,62 +71,7 @@ Song Change: 100-200ms (60% faster!)
 
 ---
 
-## 🔧 How to Apply Optimizations
-
-### Option 1: Redeploy with Optimized Server (Recommended)
-
-The deployment scripts now use the optimized server automatically.
-
-```powershell
-# Redeploy to get optimizations
-.\deploy-azure-container.ps1 -AppName "mychurch-app"
-```
-
-**The optimized server (`server-optimized.py`) is now the default!**
-
-### Option 2: Manual Update (Advanced)
-
-If you want to update without full redeployment:
-
-1. **SSH into container** (if needed)
-2. **Replace server file** with optimized version
-3. **Restart container**
-
----
-
 ## 💡 Additional Performance Tips
-
-### 1. Use Faster Azure Region
-Choose the region closest to your church:
-
-```powershell
-# Deploy to closest region
-.\deploy-azure-container.ps1 -AppName "mychurch-app" -Location "westus2"
-```
-
-**Common regions:**
-- East US (Virginia)
-- West US 2 (Washington)
-- West Europe (Netherlands)
-- Southeast Asia (Singapore)
-- Australia East (Sydney)
-
-### 2. Increase Container Resources
-
-For larger congregations or more songs, use more CPU/RAM:
-
-**Edit `deploy-azure-container.ps1` line ~255:**
-```powershell
-# Before (default):
---cpu 1 \
---memory 1.5 \
-
-# After (faster):
---cpu 2 \
---memory 2 \
-```
-
-**Cost impact:** ~$0.0000266/second (double the cost, but still only ~$1.14/month for weekly use)
 
 ### 3. Preload Songs
 If you have 100+ songs, loading them all can be slow.
@@ -214,7 +159,6 @@ Time column:
 
 **If slower than this:**
 - Check internet connection speed
-- Check Azure region location
 - Try increasing container resources
 
 ---
@@ -244,8 +188,7 @@ Time column:
 
 **If experiencing lag:**
 1. Check internet speed: https://fast.com
-2. Try different Azure region
-3. Check Wi-Fi signal strength
+2. Check Wi-Fi signal strength
 
 ---
 
@@ -281,7 +224,7 @@ The app now loads faster on phones/tablets too!
 **Method 2: Online Speed Test**
 ```
 Use: https://www.webpagetest.org/
-URL: http://your-app.azurecontainer.io:8080/operator.html
+URL: http://your-server:8000/operator.html
 Location: Choose closest to you
 ```
 
@@ -297,15 +240,6 @@ Location: Choose closest to you
 ---
 
 ## 🛠️ Advanced Optimizations (Optional)
-
-### 1. CDN (Content Delivery Network)
-
-For international churches or multiple locations:
-
-**Use Azure Front Door:**
-- Caches content closer to users
-- SSL/HTTPS included
-- Cost: ~$35/month
 
 ### 2. Redis Cache
 
@@ -330,7 +264,6 @@ For very slow connections:
 ## ✅ Checklist: Maximum Performance
 
 - [ ] Deployed with optimized server
-- [ ] Chose closest Azure region
 - [ ] Increased container resources (if needed)
 - [ ] Compressed church logo image
 - [ ] Bookmarked pages (no typing URLs)
@@ -368,12 +301,6 @@ https://fast.com
 # - Resize to 150x150 pixels
 ```
 
-**4. Far From Azure Region**
-```powershell
-# Redeploy to closer region
-.\deploy-azure-container.ps1 -AppName "mychurch-app" -Location "your-closest-region"
-```
-
 **5. Browser Issues**
 ```
 # Try different browser:
@@ -401,37 +328,10 @@ Check if server is healthy:
 # ✅ "Aggressive caching"
 ```
 
-### Azure Metrics
-
-View container performance:
-
-```powershell
-# CPU usage
-az monitor metrics list \
-  --resource <container-id> \
-  --metric CPUUsage
-
-# Memory usage
-az monitor metrics list \
-  --resource <container-id> \
-  --metric MemoryUsage
-```
-
-**Normal usage:**
-- CPU: 10-30% (spikes to 50% on load)
-- Memory: 200-400 MB
-
-**If maxed out:**
-- Increase container resources
-- Check for memory leaks
-- Review logs for errors
-
----
-
 ## 🎯 Summary
 
 ### What Changed
-1. ✅ **server-optimized.py** - New optimized server with gzip and caching
+1. ✅ **server.py** - Optimized server with gzip and caching
 2. ✅ **Dockerfile** - Updated to use optimized server
 3. ✅ **Deployment scripts** - Now deploy with optimizations by default
 
@@ -453,7 +353,7 @@ az monitor metrics list \
 
 If you're still experiencing slow loads after applying these optimizations, check:
 1. Internet speed (minimum 1 Mbps)
-2. Azure region (choose closest)
+2. Network quality between operator/projector and server
 3. Number of songs (keep under 100 active)
 4. Browser cache (don't clear it)
 

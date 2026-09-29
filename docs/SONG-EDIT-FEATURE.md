@@ -81,7 +81,7 @@ New functions added:
 - `deleteSong()` - Sends delete request to server
 - `showEditStatus(message, type)` - Displays status messages
 
-### Backend (server.py, server-optimized.py, server-azure.py)
+### Backend (src/server/server.py)
 New API endpoints:
 - `POST /api/update-song` - Updates an existing song
 - `POST /api/delete-song` - Deletes a song

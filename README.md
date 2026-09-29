@@ -4,29 +4,16 @@ A simple, self-hosted web application for displaying song lyrics and simple slid
 
 ---
 
-## 🚀 Quick Start - Choose Your Deployment Method
+## Quick Start - Deployment Options
 
-This app supports **4 different deployment methods**. Choose one that fits your needs:
+| Method | Command | Internet |
+| ------ | ------- | -------- |
+| **Local run** | `start.bat` or `python3 src/server/server.py` | Not needed |
+| **Docker** | `cd deployment/docker && docker-compose up` | Not needed |
+| **Native build** (Windows / macOS / Linux) | see [deployment/native/README.md](deployment/native/README.md) | Not needed |
 
-### Quick Reference Commands
+### 1. Local Network (recommended for on-site use)
 
-| Method            | Command                                                          | Cost      | Internet |
-| ----------------- | ---------------------------------------------------------------- | --------- | -------- |
-| **Local Network** | `start.bat` or `python3 src/server/server.py`                    | $0        | ❌ No     |
-| **Docker**        | `cd deployment/docker && docker-compose up`                      | $0        | ❌ No     |
-| **Azure Cloud**   | `.\deployment\azure\deploy-azure-container.ps1 -AppName "myapp"` | ~$0.57/mo | ✅ Yes    |
-| **Windows EXE**   | `.\deployment\pyinstaller\build-executable.ps1`                  | $0        | ❌ No     |
-
----
-
-### Detailed Deployment Options
-
-#### 1. 🖥️ Local Network (Recommended for On-Site)
-Run on your local computer/network - perfect for on-site church services.
-
-**Best for:** Church services where devices are on same WiFi
-
-**Setup:** 
 ```bash
 # Windows
 start.bat
@@ -35,105 +22,41 @@ start.bat
 python3 src/server/server.py
 ```
 
-**Access:**
 ```
 Landing Page:      http://localhost:8000/index.html
 Operator Control:  http://localhost:8000/operator.html
 Projector Display: http://localhost:8000/projector.html
 ```
 
-**Cost:** $0 | **Internet:** Not needed | **Setup:** Easy
+See the [Local Deployment Guide](deployment/local/README.md).
 
-👉 **[Local Deployment Guide](deployment/local/README.md)**
+### 2. Docker
 
----
-
-#### 2. 🐳 Docker Container (Recommended for Development)
-Run in a containerized environment for consistency and isolation.
-
-**Best for:** Testing and development with container isolation
-
-**Setup:** 
 ```bash
 cd deployment/docker
 docker-compose up
 ```
 
-**Cost:** $0 (Docker is free) | **Internet:** Not needed | **Setup:** Medium
+See the [Docker Deployment Guide](deployment/docker/README.md).
 
-**Why Docker:**
-- ✅ **Consistent environment** - Same setup everywhere
-- ✅ **Isolation** - Doesn't affect your system
-- ✅ **Easy to test** - Before cloud deployment
-- ✅ **Development friendly** - Great for testing changes
-- ✅ **Multiple instances** - Run several at once
+### 3. Native builds (Windows / macOS / Linux)
 
-👉 **[Docker Deployment Guide](deployment/docker/README.md)**
+Standalone executables that need no Python install. Build and usage details: [deployment/native/README.md](deployment/native/README.md).
 
 ---
 
-#### 3. ☁️ Azure Cloud (Recommended for Accessibility)
-Deploy to Azure Container Instances for internet access from anywhere.
+## Security
 
-**Best for:** Remote access from anywhere with WebSocket support
+By default the server has no authentication: anyone on the network can control the projector and edit or delete songs. Set the `OPERATOR_KEY` environment variable to require a key:
 
-**Full WebSocket Support** - Perfect for this app! Deploy to Azure Container Instances with native WebSocket support.
-
-```powershell
-# Windows - One command deploy
-.\deployment\azure\deploy-azure-container.ps1 -AppName "mychurch-app"
-
-# Linux/Mac - One command deploy
-./deployment\azure\deploy-azure-container.sh --app-name "mychurch-app"
+```bash
+OPERATOR_KEY=some-long-secret python3 src/server/server.py
 ```
 
-**Cost:** ~$0.57/month (3 hrs/week) | **Internet:** Required | **Setup Time:** 5 minutes
+- POST APIs must send the key in the `X-Operator-Key` header.
+- WebSocket connections must pass it as `?key=...`.
 
-**Why Container Instances:**
-- ✅ **Full WebSocket Support** - Native ws:// protocol support
-- ✅ **Pay-per-second** - Only $0.57/month for weekly use (3hr/week)
-- ✅ **No quota issues** - Different quota from App Service
-- ✅ **Easy start/stop** - Save money when not in use
-- ✅ **5-minute deployment** - Fast and simple
-
-👉 **[Azure Deployment Guide](deployment/azure/README.md)**
-
----
-
-#### 4. 📦 Windows Executable (PyInstaller)
-Create a standalone `.exe` file - no Python installation needed.
-
-**Best for:** Distribution to other PCs
-
-```powershell
-cd .\deployment\pyinstaller
-.\build-executable.ps1
-```
-
-**Creates:** `dist/ChurchApp.exe` | **Size:** ~50MB | **Platforms:** Windows only
-
-**Use Case:**
-- Distributing to churches without technical staff
-- Running without Python installation
-- Portable USB installation
-
-👉 **[PyInstaller Build Guide](deployment/pyinstaller/README.md)**
-
----
-
-## Deployment Comparison
-
-| Feature               | Local Network    | Docker              | Azure Cloud   | Windows EXE  |
-| --------------------- | ---------------- | ------------------- | ------------- | ------------ |
-| **Setup Difficulty**  | Easy             | Medium              | Medium        | Medium       |
-| **Monthly Cost**      | $0               | $0                  | $0.57-$1.14   | $0           |
-| **Internet Required** | No               | No                  | Yes           | No           |
-| **Network Range**     | Local WiFi       | Local WiFi          | Global        | Local WiFi   |
-| **Python Needed**     | Yes              | No (Docker)         | No            | No           |
-| **Startup Time**      | Fast             | Normal              | Normal        | Slow         |
-| **Best For**          | On-site services | Development/Testing | Remote access | Distribution |
-| **Scaling**           | Manual           | Easy                | Automatic     | No           |
-| **Production Ready**  | ⚠️ Limited        | ✅ Good              | ✅ Excellent   | ⚠️ Limited    |
+Do not expose the server to the internet without `OPERATOR_KEY` set, and put it behind TLS (reverse proxy) if it is reachable outside a trusted LAN.
 
 ---
 
@@ -197,16 +120,9 @@ Or use the provided startup script:
 ./startup.sh
 ```
 
-### Windows Standalone Executable (No Python Required)
+### Native Builds (No Python Required)
 
-Build a standalone Windows executable that doesn't require Python installation:
-
-```powershell
-cd .\deployment\pyinstaller
-.\build-executable.ps1
-```
-
-This creates a `dist` folder with the executable. See `deployment/pyinstaller/README.md` for details.
+Standalone builds for Windows, macOS and Linux: see [deployment/native/README.md](deployment/native/README.md).
 
 ---
 
@@ -258,7 +174,7 @@ Press **F11** for full-screen mode.
 3. Click a song to load its verses
 4. Click any verse to display it on the projector (displays 4-6 lines at once)
 
-**See [SINGLISH-SEARCH-GUIDE.md](SINGLISH-SEARCH-GUIDE.md) for detailed search examples and tips.**
+**See [docs/SINGLISH-SEARCH.md](docs/SINGLISH-SEARCH.md) for detailed search examples and tips.**
 
 ### Font Size
 - **Small**: 36px
@@ -456,8 +372,7 @@ PresentationApp/
 │   │   └── images/
 │   │       └── church-logo.png  # Church logo
 │   ├── server/                   # Server code
-│   │   ├── server.py            # Main WebSocket & HTTP server
-│   │   └── server-optimized.py  # Optimized for Azure
+│   │   └── server.py            # Main WebSocket & HTTP server
 │   └── songs/                    # Song library (JSON files)
 │       ├── amazing-grace.json
 │       ├── blessed-assurance.json
@@ -469,19 +384,12 @@ PresentationApp/
 │   │   ├── README.md
 │   │   ├── Dockerfile            # Docker image definition
 │   │   └── docker-compose.yml    # Multi-container setup
-│   ├── azure/                    # Azure Cloud deployment
-│   │   ├── README.md
-│   │   ├── deploy-azure-container.ps1
-│   │   ├── deploy-azure-container.sh
-│   │   └── ... (other Azure scripts)
-│   └── pyinstaller/              # Windows executable build
-│       ├── README.md
-│       ├── build-executable.ps1
-│       └── ... (build files)
+│   └── native/                   # Native builds (Windows/macOS/Linux)
+│       └── README.md
 ├── docs/                         # Documentation
 │   ├── PROJECT-STRUCTURE.md      # Detailed file structure
 │   ├── QUICK-START.md            # Getting started guide
-│   ├── SINGLISH-SEARCH-GUIDE.md  # Search documentation
+│   ├── SINGLISH-SEARCH.md  # Search documentation
 │   ├── MULTI-LINE-SONG-FORMAT.md # Song format guide
 │   └── ... (other documentation)
 ├── start.bat                     # Windows startup script
@@ -540,9 +448,8 @@ For custom features or modifications:
 
 - 🚀 **[Local Deployment Guide](deployment/local/README.md)** - Run on your network
 - 🐳 **[Docker Deployment Guide](deployment/docker/README.md)** - Containerized deployment
-- ☁️ **[Azure Deployment Guide](deployment/azure/README.md)** - Deploy to cloud
-- 📦 **[PyInstaller Build Guide](deployment/pyinstaller/README.md)** - Create standalone EXE
-- 📘 **[Singlish Search Guide](docs/SINGLISH-SEARCH-GUIDE.md)** - Search in multiple languages
+- 📦 **[Native Builds](deployment/native/README.md)** - Standalone builds for Windows/macOS/Linux
+- 📘 **[Singlish Search Guide](docs/SINGLISH-SEARCH.md)** - Search in multiple languages
 - 📋 **[Song Format Guide](docs/MULTI-LINE-SONG-FORMAT.md)** - Create and edit songs
 - 📁 **[Project Structure](docs/PROJECT-STRUCTURE.md)** - Detailed file organization
 

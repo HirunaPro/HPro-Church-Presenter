@@ -206,6 +206,5 @@ Press `Ctrl+C` in the terminal running the server.
 
 ## Next Steps
 
-- [View Azure Deployment Guide](../azure/README.md) for cloud deployment
-- [View PyInstaller Guide](../pyinstaller/README.md) for creating a standalone executable
+- [View Native Builds Guide](../native/README.md) for standalone Windows/macOS/Linux builds
 - [View Main README](../../README.md) for general information
