@@ -1,7 +1,22 @@
 // Projector Display JavaScript
 
 // Configuration
-const WEBSOCKET_URL = `ws://${window.location.hostname}:8765`;
+const DEFAULT_WS_PORT = 8765;
+
+async function getWebSocketUrl() {
+    let wsPort = DEFAULT_WS_PORT;
+    try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+            const config = await res.json();
+            if (config.wsPort) wsPort = config.wsPort;
+        }
+    } catch (error) {
+        console.warn('Failed to load config, using default WebSocket port:', error);
+    }
+    const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${scheme}//${window.location.hostname}:${wsPort}`;
+}
 
 // State
 let ws = null;
@@ -65,9 +80,9 @@ function showWelcomeScreen() {
 }
 
 // WebSocket Connection
-function initWebSocket() {
+async function initWebSocket() {
     try {
-        ws = new WebSocket(WEBSOCKET_URL);
+        ws = new WebSocket(await getWebSocketUrl());
         
         ws.onopen = () => {
             console.log('Projector WebSocket connected');
@@ -176,10 +191,8 @@ function updateDisplay(content) {
     setTimeout(() => {
         // Update text content
         if (content.text) {
-            // Use innerHTML to preserve line breaks
-            // Replace newlines with <br> tags for proper display
-            const formattedText = content.text.replace(/\n/g, '<br>');
-            projectorContent.innerHTML = formattedText;
+            // textContent avoids HTML injection; CSS white-space: pre-line keeps line breaks
+            projectorContent.textContent = content.text;
         }
         
         // Update font size
@@ -257,12 +270,12 @@ function calculateAutoFontSize() {
     tempElement.style.cssText = `
         position: absolute;
         visibility: hidden;
-        white-space: nowrap;
+        white-space: pre;
         display: inline-block;
         padding: 0;
         margin: 0;
     `;
-    tempElement.innerHTML = projectorContent.innerHTML;
+    tempElement.textContent = projectorContent.textContent;
     document.body.appendChild(tempElement);
     
     // Binary search for the optimal font size

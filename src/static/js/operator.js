@@ -1,7 +1,8 @@
 // Operator Control JavaScript
 
 // Configuration
-const WEBSOCKET_URL = `ws://${window.location.hostname}:8765`;
+const DEFAULT_WS_PORT = 8765;
+const OPERATOR_KEY_STORAGE = 'operatorKey';
 const CHURCH_NAME = "Our Church"; // Configurable
 
 // State
@@ -64,10 +65,96 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
-// WebSocket Connection
-function initWebSocket() {
+// Server config and operator auth
+let serverConfig = null;
+
+async function getServerConfig() {
+    if (serverConfig) return serverConfig;
+    let config = { wsPort: DEFAULT_WS_PORT, authRequired: false };
     try {
-        ws = new WebSocket(WEBSOCKET_URL);
+        const res = await fetch('/api/config');
+        if (res.ok) {
+            const data = await res.json();
+            config = {
+                wsPort: data.wsPort || DEFAULT_WS_PORT,
+                authRequired: !!data.authRequired
+            };
+            serverConfig = config;
+        }
+    } catch (error) {
+        console.warn('Failed to load config, using defaults:', error);
+    }
+    return config;
+}
+
+function promptForOperatorKey() {
+    const key = (window.prompt('Enter operator key:') || '').trim();
+    if (key) {
+        localStorage.setItem(OPERATOR_KEY_STORAGE, key);
+    }
+    return key;
+}
+
+function getOperatorKey() {
+    return localStorage.getItem(OPERATOR_KEY_STORAGE) || '';
+}
+
+async function ensureOperatorKey() {
+    const config = await getServerConfig();
+    if (!config.authRequired) return '';
+    return getOperatorKey() || promptForOperatorKey();
+}
+
+async function getWebSocketUrl() {
+    const config = await getServerConfig();
+    const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    let url = `${scheme}//${window.location.hostname}:${config.wsPort}`;
+    const key = await ensureOperatorKey();
+    if (key) {
+        url += `?key=${encodeURIComponent(key)}`;
+    }
+    return url;
+}
+
+// POST JSON to the API with operator auth; throws Error with the server message on failure
+async function apiPost(url, payload) {
+    const headers = { 'Content-Type': 'application/json' };
+    const key = await ensureOperatorKey();
+    if (key) {
+        headers['X-Operator-Key'] = key;
+    }
+    
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(payload)
+    });
+    
+    if (response.status === 401) {
+        localStorage.removeItem(OPERATOR_KEY_STORAGE);
+        promptForOperatorKey();
+        if (ws) ws.close();
+        throw new Error('Unauthorized: invalid or missing operator key. Please try again.');
+    }
+    
+    if (!response.ok) {
+        let message = `Server error: ${response.status}`;
+        try {
+            const data = await response.json();
+            if (data && data.message) message = data.message;
+        } catch (e) {
+            // Non-JSON error body; keep generic message
+        }
+        throw new Error(message);
+    }
+    
+    return await response.json();
+}
+
+// WebSocket Connection
+async function initWebSocket() {
+    try {
+        ws = new WebSocket(await getWebSocketUrl());
         
         ws.onopen = () => {
             console.log('WebSocket connected');
@@ -676,19 +763,7 @@ function parseBulkSongs(input) {
 // Save songs to the server
 async function saveSongs(songs) {
     try {
-        const response = await fetch('/api/save-songs', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ songs: songs })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
-        }
-        
-        return await response.json();
+        return await apiPost('/api/save-songs', { songs: songs });
         
     } catch (error) {
         console.error('Error saving songs:', error);
@@ -828,26 +903,10 @@ async function saveEditedSong() {
     try {
         showEditStatus('Saving changes...', 'info');
         
-        const response = await fetch('/api/update-song', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                oldFilename: currentEditingSong.filename,
-                song: updatedSong
-            })
+        const result = await apiPost('/api/update-song', {
+            oldFilename: currentEditingSong.filename,
+            song: updatedSong
         });
-        
-        console.log('Response status:', response.status);
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Server error response:', errorText);
-            throw new Error(`Server error: ${response.status}`);
-        }
-        
-        const result = await response.json();
         console.log('Result:', result);
         
         if (result.success) {
@@ -884,21 +943,9 @@ async function deleteSong() {
     try {
         showEditStatus('Deleting song...', 'info');
         
-        const response = await fetch('/api/delete-song', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                filename: currentEditingSong.filename
-            })
+        const result = await apiPost('/api/delete-song', {
+            filename: currentEditingSong.filename
         });
-        
-        if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
-        }
-        
-        const result = await response.json();
         
         if (result.success) {
             showEditStatus('Song deleted successfully!', 'success');
