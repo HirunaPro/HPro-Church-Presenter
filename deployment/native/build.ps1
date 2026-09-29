@@ -13,7 +13,7 @@ $Py = if ($env:PYTHON) { $env:PYTHON } else { 'python' }
 & $Py -m venv $Venv
 $VPy = Join-Path $Venv 'Scripts\python.exe'
 & $VPy -m pip install --upgrade pip
-& $VPy -m pip install -r requirements.txt pyinstaller
+& $VPy -m pip install -r requirements-build.txt
 if ($LASTEXITCODE -ne 0) { throw 'pip install failed' }
 
 Remove-Item -Recurse -Force "dist\$Target", "build\native\$Target" -ErrorAction SilentlyContinue

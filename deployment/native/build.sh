@@ -15,7 +15,7 @@ VENV="${VENV_DIR:-$ROOT/.venv-build}"
 PY="${PYTHON:-python3}"
 "$PY" -m venv "$VENV"
 "$VENV/bin/python" -m pip install --upgrade pip
-"$VENV/bin/python" -m pip install -r requirements.txt pyinstaller
+"$VENV/bin/python" -m pip install -r requirements-build.txt
 
 rm -rf "dist/$TARGET" "build/native/$TARGET"
 "$VENV/bin/python" -m PyInstaller --noconfirm --clean \
