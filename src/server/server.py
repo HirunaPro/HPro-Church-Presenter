@@ -156,7 +156,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         if path.startswith('/api/') or path.startswith('/songs/') or path.endswith('.html') or path == '/':
             self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
         elif path.endswith(('.js', '.css')):
-            self.send_header('Cache-Control', 'public, max-age=300')
+            self.send_header('Cache-Control', 'no-cache')
         super().end_headers()
 
     # ---- helpers ----

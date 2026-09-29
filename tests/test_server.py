@@ -86,8 +86,8 @@ def test_config_and_cache_headers(http_server):
     s, h, b = req(http_server, '/api/config')
     assert s == 200 and json.loads(b) == {'wsPort': server.WEBSOCKET_PORT, 'authRequired': False}
     assert 'no-cache' in req(http_server, '/index.html')[1]['Cache-Control']
-    assert req(http_server, '/a.js')[1]['Cache-Control'] == 'public, max-age=300'
-    assert req(http_server, '/a.css')[1]['Cache-Control'] == 'public, max-age=300'
+    assert req(http_server, '/a.js')[1]['Cache-Control'] == 'no-cache'
+    assert req(http_server, '/a.css')[1]['Cache-Control'] == 'no-cache'
     assert 'Access-Control-Allow-Origin' not in h
 
 
