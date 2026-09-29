@@ -52,3 +52,4 @@ build/native/
 build/pyinstaller/
 .venv-build/
 .scratch/
+.playwright-mcp/
