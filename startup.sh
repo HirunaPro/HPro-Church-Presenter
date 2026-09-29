@@ -2,9 +2,22 @@
 # Church Presentation App startup script
 # Local network deployment for macOS/Linux
 
-echo "Starting Church Presentation App..."
+set -e
+cd "$(dirname "$0")"
+
+PY="${PYTHON:-python3}"
+if ! "$PY" -c 'import sys; sys.exit(sys.version_info < (3, 11))'; then
+    echo "Python 3.11+ required (found: $("$PY" --version 2>&1)). Set PYTHON=/path/to/python3.x"
+    exit 1
+fi
+
+if [ ! -d .venv ]; then
+    echo "Creating virtual environment..."
+    "$PY" -m venv .venv
+fi
+
 echo "Installing Python dependencies..."
-pip3 install -r requirements.txt
+.venv/bin/pip install -q -r requirements.txt
 
 echo "Starting Python server..."
-python3 src/server/server.py
+exec .venv/bin/python src/server/server.py

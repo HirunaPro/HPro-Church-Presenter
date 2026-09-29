@@ -47,8 +47,6 @@ Thumbs.db
 # Deployment scripts (not needed in container)
 deploy-*.ps1
 deploy-*.sh
-azure-*.ps1
-azure-*.sh
 *.bat
 
 # Logs

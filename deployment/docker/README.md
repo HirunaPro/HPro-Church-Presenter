@@ -540,27 +540,12 @@ docker secret create db_password secret.txt
 
 ## Comparison: Docker vs Other Methods
 
-| Feature | Docker | Local | Azure | Executable |
-|---------|--------|-------|-------|-----------|
-| Setup Time | 5-10 min | 5 min | 5 min | 15 min |
-| Consistency | ✅ Excellent | ❌ System dependent | ✅ Excellent | ✅ Good |
-| Easy Updates | ✅ Yes | ✅ Yes | ⚠️ Rebuild image | ❌ Rebuild exe |
-| Cross-Platform | ✅ Yes | ❌ Platform specific | ✅ Yes | ❌ Windows only |
-| Production Ready | ✅ Yes | ❌ Development | ✅ Yes | ⚠️ Limited |
-| Scaling | ✅ Easy | ❌ Difficult | ✅ Very easy | ❌ No |
-
----
-
-## Docker vs Azure Container Instances
-
-| Aspect | Docker Local | Azure Container |
-|--------|--------------|-----------------|
-| Cost | $0 | $0.57/month |
-| Setup | Local | Cloud |
-| Access | Local network | Internet |
-| Maintenance | You manage | Microsoft manages |
-| Scaling | Manual | Automatic |
-| Best For | Development | Production |
+| Feature | Docker | Local | Native Build |
+|---------|--------|-------|--------------|
+| Setup Time | 5-10 min | 5 min | Download & run |
+| Needs Python | ❌ No | ✅ Yes | ❌ No |
+| Cross-Platform | ✅ Yes | ✅ Yes | ✅ Windows/macOS/Linux builds |
+| Easy Updates | ⚠️ Rebuild image | ✅ Yes | ⚠️ New build |
 
 ---
 
@@ -577,8 +562,7 @@ docker secret create db_password secret.txt
 
 3. **Scale to Production**
    - For local: Keep using Docker Compose
-   - For cloud: Move to [Azure Deployment](../azure/README.md)
-   - For distribution: Build [Windows Executable](../pyinstaller/README.md)
+   - For distribution: Use [Native Builds](../native/README.md)
 
 4. **Optimize Images**
    - Reduce layer count
