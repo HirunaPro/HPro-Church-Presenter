@@ -24,7 +24,6 @@ let ws = null;
 // DOM Elements
 const projectorContainer = document.getElementById('projectorContainer');
 const projectorContent = document.getElementById('projectorContent');
-const churchLogo = document.getElementById('churchLogo');
 const fullscreenHint = document.getElementById('fullscreenHint');
 const nextVersePreview = document.getElementById('nextVersePreview');
 const songTitleDisplay = document.getElementById('songTitleDisplay');
@@ -65,7 +64,6 @@ function showWelcomeScreen() {
         projectorContent.innerHTML = '';
         projectorContent.appendChild(iframe);
         
-        churchLogo.style.display = 'none';
         
         // Fade in iframe after load
         iframe.onload = () => {
@@ -132,7 +130,6 @@ function updateDisplay(content) {
             projectorContent.innerHTML = '';
             projectorContent.appendChild(iframe);
             
-            churchLogo.style.display = 'none';
             
             // Hide next verse preview for welcome screen
             nextVersePreview.classList.remove('visible');
@@ -166,7 +163,6 @@ function updateDisplay(content) {
         setTimeout(() => {
             projectorContainer.classList.add('blank');
             projectorContent.classList.add('blank');
-            churchLogo.style.display = 'none';
             
             // Hide next verse preview for blank screen
             nextVersePreview.classList.remove('visible');
@@ -179,7 +175,6 @@ function updateDisplay(content) {
     } else {
         projectorContainer.classList.remove('blank');
         projectorContent.classList.remove('blank');
-        churchLogo.style.display = 'block';
     }
     
     // Fade transition sequence for content changes
@@ -250,15 +245,12 @@ function calculateAutoFontSize() {
     const nextVerseHeight = nextVersePreview.classList.contains('visible') ? 
         nextVersePreview.offsetHeight + 20 : 0;
     
-    // Account for church logo
-    const logoHeight = churchLogo.style.display !== 'none' ? 100 : 0;
-    
     // More generous padding to prevent cropping
     const paddingHorizontal = 100; // Left and right padding combined
     const paddingVertical = 80; // Top and bottom padding
     
     const availableWidth = containerWidth - paddingHorizontal;
-    const availableHeight = containerHeight - songTitleHeight - nextVerseHeight - logoHeight - paddingVertical;
+    const availableHeight = containerHeight - songTitleHeight - nextVerseHeight - paddingVertical;
     
     // Start with a large font size and reduce until it fits
     let minFontSize = 20;
