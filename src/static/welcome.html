@@ -1,295 +1,165 @@
 <!DOCTYPE html>
 <html lang="si">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome Screen</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome</title>
+<style>
+:root {
+    --bg: #05070a;
+    --bg-2: #0d1117;
+    --text: #f5f3ee;
+    --muted: rgba(245, 243, 238, .55);
+    --accent: #d8bf8a;
+    --accent-dim: rgba(216, 191, 138, .35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body {
+    width: 100%; height: 100%; overflow: hidden; cursor: none;
+    background: radial-gradient(ellipse at 50% 40%, var(--bg-2) 0%, var(--bg) 75%);
+    color: var(--text);
+    font-family: 'Noto Sans Sinhala', 'Noto Sans Tamil', 'Iskoola Pota', 'Latha', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+.glow {
+    position: fixed; width: 90vmax; height: 90vmax; border-radius: 50%;
+    pointer-events: none; will-change: transform;
+}
+.glow.a {
+    left: -35vmax; top: -50vmax;
+    background: radial-gradient(circle, rgba(216,191,138,.075), transparent 62%);
+    animation: drift-a 48s ease-in-out infinite alternate;
+}
+.glow.b {
+    right: -40vmax; bottom: -55vmax;
+    background: radial-gradient(circle, rgba(90,120,170,.09), transparent 62%);
+    animation: drift-b 60s ease-in-out infinite alternate;
+}
+@keyframes drift-a { to { transform: translate3d(14vw, 10vh, 0); } }
+@keyframes drift-b { to { transform: translate3d(-12vw, -8vh, 0); } }
 
-        body {
-            font-family: 'Noto Sans Sinhala', Arial, sans-serif;
-            overflow: hidden;
-            height: 100vh;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #0a0a0a 100%);
-            background-size: 400% 400%;
-            animation: gradientShift 45s ease infinite;
-        }
+.stage {
+    position: fixed; inset: 0;
+    padding: 7vh 6vw;
+    display: flex; align-items: center; justify-content: center;
+}
+.content {
+    width: 100%; max-height: 100%;
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; gap: 3.2vh;
+    animation: rise 1.4s cubic-bezier(.2,.7,.2,1) both;
+}
+@keyframes rise { from { opacity: 0; transform: translate3d(0, 1.5vh, 0); } }
 
-        @keyframes gradientShift {
-            0% {
-                background-position: 0% 50%;
-            }
-            50% {
-                background-position: 100% 50%;
-            }
-            100% {
-                background-position: 0% 50%;
-            }
-        }
+.logo { max-height: 14vh; max-width: 30vw; object-fit: contain; }
+.eyebrow {
+    display: flex; align-items: center; gap: 1.6vw;
+    font-size: clamp(16px, 2.3vh, 64px); letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent); font-weight: 500;
+}
+.eyebrow .dot { width: .35em; height: .35em; border-radius: 50%; background: var(--accent-dim); flex: none; }
+.eyebrow span { text-wrap: balance; }
 
-        .container {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            position: relative;
-            z-index: 10;
-        }
+.title {
+    font-size: clamp(36px, 11vh, 400px); line-height: 1.22; font-weight: 700;
+    letter-spacing: -.005em; max-width: 100%;
+    text-wrap: balance; overflow-wrap: anywhere;
+}
+.rule {
+    width: 9vw; height: max(2px, .3vh); border-radius: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+.quote { max-width: 78vw; display: flex; flex-direction: column; align-items: center; gap: 2.4vh; }
+.message {
+    font-size: clamp(20px, 4.2vh, 150px); line-height: 1.6; font-weight: 400;
+    color: rgba(245,243,238,.88); text-wrap: balance; overflow-wrap: anywhere;
+}
+.reference { font-size: clamp(16px, 2.8vh, 96px); color: var(--muted); font-weight: 500; }
+.reference::before { content: "\2014\00a0"; color: var(--accent-dim); }
 
-        .logo-container {
-            margin-bottom: 40px;
-            animation: fadeInDown 1.5s ease-out;
-        }
+.only-title .title { font-size: clamp(44px, 15vh, 520px); }
 
-        .logo {
-            width: 350px;
-            height: 350px;
-            object-fit: contain;
-            filter: drop-shadow(0 10px 30px rgba(255, 215, 0, 0.5));
-        }
-
-        .text-container {
-            text-align: center;
-            animation: fadeInUp 1.5s ease-out;
-        }
-
-        .church-name {
-            font-size: 4rem;
-            font-weight: bold;
-            color: #FFE066;
-            text-shadow: 0 5px 15px rgba(255, 224, 102, 0.7), 0 0 30px rgba(255, 224, 102, 0.5), 0 2px 5px rgba(0, 0, 0, 0.8);
-            margin-bottom: 30px;
-            animation: pulse 8s ease-in-out infinite;
-        }
-
-        .event-name {
-            font-size: 3rem;
-            font-weight: 600;
-            color: #FFC966;
-            text-shadow: 0 5px 15px rgba(255, 201, 102, 0.7), 0 0 30px rgba(255, 201, 102, 0.5), 0 2px 5px rgba(0, 0, 0, 0.8);
-            margin-bottom: 25px;
-            animation: glow 10s ease-in-out infinite alternate;
-        }
-
-        .year {
-            font-size: 2.5rem;
-            font-weight: 600;
-            color: #FFE066;
-            text-shadow: 0 5px 15px rgba(255, 224, 102, 0.7), 0 0 30px rgba(255, 224, 102, 0.5), 0 2px 5px rgba(0, 0, 0, 0.8);
-            margin-bottom: 40px;
-            animation: pulse 8s ease-in-out infinite;
-        }
-
-        .verse-container {
-            max-width: 900px;
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .verse {
-            font-size: 1.8rem;
-            font-weight: 400;
-            color: #FFFFFF;
-            text-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
-            line-height: 1.6;
-            margin-bottom: 15px;
-            font-style: italic;
-        }
-
-        .verse-reference {
-            font-size: 1.5rem;
-            font-weight: 500;
-            color: #FFE066;
-            text-shadow: 0 3px 10px rgba(255, 224, 102, 0.7), 0 2px 5px rgba(0, 0, 0, 0.8);
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.02);
-            }
-        }
-
-        @keyframes glow {
-            from {
-                text-shadow: 0 5px 15px rgba(255, 201, 102, 0.7), 0 0 30px rgba(255, 201, 102, 0.5), 0 2px 5px rgba(0, 0, 0, 0.8);
-            }
-            to {
-                text-shadow: 0 5px 15px rgba(255, 201, 102, 0.7), 0 0 50px rgba(255, 201, 102, 0.8), 0 0 70px rgba(255, 201, 102, 0.6), 0 2px 5px rgba(0, 0, 0, 0.8);
-            }
-        }
-
-        /* Floating particles */
-        .particles {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
-
-        .particle {
-            position: absolute;
-            background: rgba(100, 150, 255, 0.4);
-            border-radius: 50%;
-            animation: rise linear infinite;
-        }
-
-        @keyframes rise {
-            0% {
-                bottom: -100px;
-                opacity: 0;
-            }
-            10% {
-                opacity: 1;
-            }
-            90% {
-                opacity: 1;
-            }
-            100% {
-                bottom: 110%;
-                opacity: 0;
-            }
-        }
-
-        /* Generate particles with different sizes and positions */
-        .particle:nth-child(1) { left: 10%; width: 10px; height: 10px; animation-duration: 8s; animation-delay: 0s; }
-        .particle:nth-child(2) { left: 20%; width: 15px; height: 15px; animation-duration: 10s; animation-delay: 1s; }
-        .particle:nth-child(3) { left: 30%; width: 8px; height: 8px; animation-duration: 7s; animation-delay: 2s; }
-        .particle:nth-child(4) { left: 40%; width: 12px; height: 12px; animation-duration: 9s; animation-delay: 0.5s; }
-        .particle:nth-child(5) { left: 50%; width: 14px; height: 14px; animation-duration: 11s; animation-delay: 1.5s; }
-        .particle:nth-child(6) { left: 60%; width: 9px; height: 9px; animation-duration: 8.5s; animation-delay: 2.5s; }
-        .particle:nth-child(7) { left: 70%; width: 11px; height: 11px; animation-duration: 10.5s; animation-delay: 0.8s; }
-        .particle:nth-child(8) { left: 80%; width: 13px; height: 13px; animation-duration: 9.5s; animation-delay: 1.8s; }
-        .particle:nth-child(9) { left: 90%; width: 10px; height: 10px; animation-duration: 8.2s; animation-delay: 2.2s; }
-        .particle:nth-child(10) { left: 15%; width: 12px; height: 12px; animation-duration: 11.5s; animation-delay: 0.3s; }
-        .particle:nth-child(11) { left: 25%; width: 8px; height: 8px; animation-duration: 7.5s; animation-delay: 1.2s; }
-        .particle:nth-child(12) { left: 35%; width: 14px; height: 14px; animation-duration: 10.2s; animation-delay: 2.8s; }
-        .particle:nth-child(13) { left: 45%; width: 11px; height: 11px; animation-duration: 9.2s; animation-delay: 0.6s; }
-        .particle:nth-child(14) { left: 55%; width: 13px; height: 13px; animation-duration: 8.8s; animation-delay: 1.6s; }
-        .particle:nth-child(15) { left: 65%; width: 9px; height: 9px; animation-duration: 11.2s; animation-delay: 2.6s; }
-        .particle:nth-child(16) { left: 75%; width: 15px; height: 15px; animation-duration: 7.8s; animation-delay: 0.9s; }
-        .particle:nth-child(17) { left: 85%; width: 10px; height: 10px; animation-duration: 10.8s; animation-delay: 1.9s; }
-        .particle:nth-child(18) { left: 95%; width: 12px; height: 12px; animation-duration: 9.8s; animation-delay: 2.9s; }
-        .particle:nth-child(19) { left: 5%; width: 14px; height: 14px; animation-duration: 8.3s; animation-delay: 0.4s; }
-        .particle:nth-child(20) { left: 50%; width: 11px; height: 11px; animation-duration: 11.8s; animation-delay: 1.4s; }
-
-        /* Light rays */
-        .light-rays {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            z-index: 2;
-        }
-
-        .ray {
-            position: absolute;
-            top: -50%;
-            left: 50%;
-            width: 2px;
-            height: 200%;
-            background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transform-origin: top center;
-            animation: rotateRay 20s linear infinite;
-        }
-
-        .ray:nth-child(1) { animation-delay: 0s; }
-        .ray:nth-child(2) { animation-delay: -5s; }
-        .ray:nth-child(3) { animation-delay: -10s; }
-        .ray:nth-child(4) { animation-delay: -15s; }
-
-        @keyframes rotateRay {
-            from {
-                transform: rotate(0deg);
-            }
-            to {
-                transform: rotate(360deg);
-            }
-        }
-    </style>
+@media (prefers-reduced-motion: reduce) {
+    .glow, .content { animation: none; }
+}
+</style>
 </head>
 <body>
-    <!-- Animated background particles -->
-    <div class="particles">
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-    </div>
-
-    <!-- Light rays -->
-    <div class="light-rays">
-        <div class="ray"></div>
-        <div class="ray"></div>
-        <div class="ray"></div>
-        <div class="ray"></div>
-    </div>
-
-    <!-- Main content -->
-    <div class="container">
-        <div class="logo-container">
-            <img src="images/church-logo.png" alt="Church Logo" class="logo">
+<div class="glow a"></div>
+<div class="glow b"></div>
+<main class="stage">
+    <div class="content" id="content">
+        <img class="logo" id="logo" alt="" hidden>
+        <div class="eyebrow" id="eyebrow" hidden>
+            <span id="subtitle" hidden></span>
+            <i class="dot" id="dot" hidden></i>
+            <span id="year" hidden></span>
         </div>
-        <div class="text-container">
-            <h1 class="church-name">සහනයට මඟ දේව සභාව</h1>
-            <h2 class="event-name">11 වන පවුල් කඳවුර</h2>
-            <h3 class="year">2025</h3>
-            <div class="verse-container">
-                <p class="verse">"ඔහු තැළුණු බටලීයක් නොබිඳින්නේය, දුම්ගහන පහන්තිරයක් නොනිවන්නේය. ඔහු සැබෑවෙන් විනිශ්චය ප්‍රකාශකරන්නේය."</p>
-                <p class="verse-reference">යෙසායා 42:3</p>
-            </div>
-        </div>
+        <h1 class="title" id="title">Welcome</h1>
+        <div class="rule" id="rule" hidden></div>
+        <blockquote class="quote" id="quote" hidden>
+            <p class="message" id="message" hidden></p>
+            <cite class="reference" id="reference" hidden></cite>
+        </blockquote>
     </div>
+</main>
+<script>
+(function () {
+    var $ = function (id) { return document.getElementById(id); };
+    var content = $('content'), stage = document.querySelector('.stage'), titleEl = $('title');
+
+    function set(id, text) {
+        var el = $(id), v = (text == null ? '' : String(text)).trim();
+        el.textContent = v;
+        el.hidden = !v;
+        return !!v;
+    }
+
+    // Shrink the largest text blocks until the whole composition fits the safe area.
+    function fit() {
+        var els = [titleEl, $('message')];
+        els.forEach(function (e) { e.style.fontSize = ''; });
+        var avail = stage.clientHeight - parseFloat(getComputedStyle(stage).paddingTop) * 2;
+        var sizes = els.map(function (e) { return parseFloat(getComputedStyle(e).fontSize); });
+        for (var i = 0; i < 40 && content.scrollHeight > avail; i++) {
+            els.forEach(function (e, k) {
+                if (e.hidden) return;
+                sizes[k] *= 0.94;
+                e.style.fontSize = sizes[k] + 'px';
+            });
+        }
+    }
+
+    function render(d) {
+        d = d || {};
+        var hasTitle = set('title', d.title || (d.title === undefined ? 'Welcome' : ''));
+        var hasSub = set('subtitle', d.subtitle), hasYear = set('year', d.year);
+        $('dot').hidden = !(hasSub && hasYear);
+        $('eyebrow').hidden = !(hasSub || hasYear);
+        var hasMsg = set('message', d.message), hasRef = set('reference', d.reference);
+        $('quote').hidden = !(hasMsg || hasRef);
+        $('rule').hidden = !(hasTitle && !$('quote').hidden);
+        content.classList.toggle('only-title', hasTitle && $('eyebrow').hidden && $('quote').hidden);
+
+        var logo = $('logo');
+        logo.hidden = true;
+        if (d.logo) {
+            logo.onload = function () { logo.hidden = false; fit(); };
+            logo.onerror = function () { logo.hidden = true; };
+            logo.src = d.logo;
+        }
+        fit();
+    }
+
+    fetch('welcome.json', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : {}; })
+        .catch(function () { return {}; })
+        .then(render);
+
+    window.addEventListener('resize', fit);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+})();
+</script>
 </body>
 </html>
