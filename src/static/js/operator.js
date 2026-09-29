@@ -1,13 +1,15 @@
 // Operator Control JavaScript
 
 // Configuration
-const WEBSOCKET_URL = `ws://${window.location.hostname}:8765`;
+const DEFAULT_WS_PORT = 8765;
+const OPERATOR_KEY_STORAGE = 'operatorKey';
 const CHURCH_NAME = "Our Church"; // Configurable
 
 // State
 let ws = null;
 let songs = [];
 let selectedSong = null;
+let activePhraseIndex = -1;
 let currentFontSize = 'medium';
 let currentContent = {
     type: 'simple_slide',
@@ -32,7 +34,12 @@ const importSongs = document.getElementById('importSongs');
 const bulkSongInput = document.getElementById('bulkSongInput');
 const importStatus = document.getElementById('importStatus');
 const showWelcomeScreenBtn = document.getElementById('showWelcomeScreen');
-const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+const blankQuickBtn = document.getElementById('blankQuickBtn');
+const prevPhraseBtn = document.getElementById('prevPhraseBtn');
+const nextPhraseBtn = document.getElementById('nextPhraseBtn');
+const phrasePosition = document.getElementById('phrasePosition');
+const openSongsBtn = document.getElementById('openSongsBtn');
+const sheetHandle = document.getElementById('sheetHandle');
 const operatorSidebar = document.getElementById('operatorSidebar');
 const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
 const selectedSongInfo = document.getElementById('selectedSongInfo');
@@ -64,10 +71,96 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
-// WebSocket Connection
-function initWebSocket() {
+// Server config and operator auth
+let serverConfig = null;
+
+async function getServerConfig() {
+    if (serverConfig) return serverConfig;
+    let config = { wsPort: DEFAULT_WS_PORT, authRequired: false };
     try {
-        ws = new WebSocket(WEBSOCKET_URL);
+        const res = await fetch('/api/config');
+        if (res.ok) {
+            const data = await res.json();
+            config = {
+                wsPort: data.wsPort || DEFAULT_WS_PORT,
+                authRequired: !!data.authRequired
+            };
+            serverConfig = config;
+        }
+    } catch (error) {
+        console.warn('Failed to load config, using defaults:', error);
+    }
+    return config;
+}
+
+function promptForOperatorKey() {
+    const key = (window.prompt('Enter operator key:') || '').trim();
+    if (key) {
+        localStorage.setItem(OPERATOR_KEY_STORAGE, key);
+    }
+    return key;
+}
+
+function getOperatorKey() {
+    return localStorage.getItem(OPERATOR_KEY_STORAGE) || '';
+}
+
+async function ensureOperatorKey() {
+    const config = await getServerConfig();
+    if (!config.authRequired) return '';
+    return getOperatorKey() || promptForOperatorKey();
+}
+
+async function getWebSocketUrl() {
+    const config = await getServerConfig();
+    const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    let url = `${scheme}//${window.location.hostname}:${config.wsPort}`;
+    const key = await ensureOperatorKey();
+    if (key) {
+        url += `?key=${encodeURIComponent(key)}`;
+    }
+    return url;
+}
+
+// POST JSON to the API with operator auth; throws Error with the server message on failure
+async function apiPost(url, payload) {
+    const headers = { 'Content-Type': 'application/json' };
+    const key = await ensureOperatorKey();
+    if (key) {
+        headers['X-Operator-Key'] = key;
+    }
+    
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(payload)
+    });
+    
+    if (response.status === 401) {
+        localStorage.removeItem(OPERATOR_KEY_STORAGE);
+        promptForOperatorKey();
+        if (ws) ws.close();
+        throw new Error('Unauthorized: invalid or missing operator key. Please try again.');
+    }
+    
+    if (!response.ok) {
+        let message = `Server error: ${response.status}`;
+        try {
+            const data = await response.json();
+            if (data && data.message) message = data.message;
+        } catch (e) {
+            // Non-JSON error body; keep generic message
+        }
+        throw new Error(message);
+    }
+    
+    return await response.json();
+}
+
+// WebSocket Connection
+async function initWebSocket() {
+    try {
+        ws = new WebSocket(await getWebSocketUrl());
         
         ws.onopen = () => {
             console.log('WebSocket connected');
@@ -134,18 +227,12 @@ async function loadSongs() {
     try {
         // Get list of song files
         const response = await fetch('/songs/');
-        const html = await response.text();
-        
-        // Parse HTML to extract .json files
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const links = doc.querySelectorAll('a');
-        
+        const files = await response.json();
+
         const songFiles = [];
-        links.forEach(link => {
-            const href = link.getAttribute('href');
-            if (href && href.endsWith('.json')) {
-                songFiles.push(href);
+        files.forEach(name => {
+            if (name.endsWith('.json')) {
+                songFiles.push(encodeURIComponent(name));
             }
         });
         
@@ -194,16 +281,29 @@ function displaySongs(songsToDisplay) {
     songsToDisplay.forEach(song => {
         const songItem = document.createElement('div');
         songItem.className = 'song-item';
+        songItem.tabIndex = 0;
+        songItem.setAttribute('role', 'option');
+        songItem.dataset.filename = song.filename;
+        if (selectedSong && selectedSong.filename === song.filename) {
+            songItem.classList.add('selected');
+        }
+        songItem.addEventListener('click', () => selectSong(song));
+        songItem.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                selectSong(song);
+            }
+        });
         
         const songTitle = document.createElement('span');
         songTitle.className = 'song-title';
         songTitle.textContent = song.title;
-        songTitle.addEventListener('click', () => selectSong(song));
         
         const editBtn = document.createElement('button');
         editBtn.className = 'song-edit-btn';
         editBtn.innerHTML = '✏️';
         editBtn.title = 'Edit song';
+        editBtn.setAttribute('aria-label', `Edit ${song.title}`);
         editBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             openEditModal(song);
@@ -221,11 +321,7 @@ function selectSong(song) {
     
     // Update selected state in list
     document.querySelectorAll('.song-item').forEach(item => {
-        item.classList.remove('selected');
-        const titleSpan = item.querySelector('.song-title');
-        if (titleSpan && titleSpan.textContent === song.title) {
-            item.classList.add('selected');
-        }
+        item.classList.toggle('selected', item.dataset.filename === song.filename);
     });
     
     // Display phrases
@@ -246,66 +342,237 @@ function displayPhrases(song) {
     }
     
     phrasesSection.innerHTML = '';
+    activePhraseIndex = -1;
     
     song.phrases.forEach((phrase, index) => {
         const phraseItem = document.createElement('div');
         phraseItem.className = 'phrase-item';
         
         // Handle both string phrases (old format) and array phrases (new multi-line format)
-        let phraseText;
-        let displayText;
-        
-        if (Array.isArray(phrase)) {
-            // New format: array of lines
-            phraseText = phrase.join('\n');
-            displayText = phrase.join('\n');
-        } else {
-            // Old format: single string
-            phraseText = phrase;
-            displayText = phrase;
-        }
+        const displayText = phraseToText(phrase);
         
         phraseItem.textContent = displayText;
-        
-        phraseItem.addEventListener('click', () => {
-            // Remove active class from all phrases
-            document.querySelectorAll('.phrase-item').forEach(p => {
-                p.classList.remove('active');
-            });
-            
-            // Add active class to clicked phrase
-            phraseItem.classList.add('active');
-            
-            // Get the next verse's first line for preview
-            let nextVersePreview = null;
-            if (index < song.phrases.length - 1) {
-                const nextPhrase = song.phrases[index + 1];
-                if (Array.isArray(nextPhrase) && nextPhrase.length > 0) {
-                    nextVersePreview = nextPhrase[0];
-                } else if (typeof nextPhrase === 'string') {
-                    // For old format, take the first line if it contains newlines
-                    nextVersePreview = nextPhrase.split('\n')[0];
-                }
+        phraseItem.tabIndex = 0;
+        phraseItem.setAttribute('role', 'listitem');
+        phraseItem.addEventListener('click', () => goLive(index));
+        phraseItem.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                goLive(index);
             }
-            
-            // Send to projector
-            sendToProjector({
-                type: 'song_phrase',
-                text: phraseText,
-                fontSize: currentFontSize,
-                songTitle: song.title,
-                nextVersePreview: nextVersePreview
-            });
         });
         phrasesSection.appendChild(phraseItem);
     });
+    updateTransport();
     
     // Switch to Songs tab automatically when song is selected
     switchTab('songs');
 }
 
+function phraseToText(phrase) {
+    return Array.isArray(phrase) ? phrase.join('\n') : phrase;
+}
+
+function clearActivePhrase() {
+    activePhraseIndex = -1;
+    document.querySelectorAll('.phrase-item.active').forEach(p => p.classList.remove('active'));
+    updateTransport();
+}
+
+function updateTransport() {
+    const count = selectedSong ? selectedSong.phrases.length : 0;
+    prevPhraseBtn.disabled = !count || activePhraseIndex <= 0;
+    nextPhraseBtn.disabled = !count || activePhraseIndex >= count - 1;
+    phrasePosition.textContent = count
+        ? `${activePhraseIndex >= 0 ? activePhraseIndex + 1 : '–'} / ${count}`
+        : '–';
+}
+
+function stepPhrase(delta) {
+    const count = selectedSong ? selectedSong.phrases.length : 0;
+    if (!count) return;
+    const next = activePhraseIndex < 0 ? 0 : activePhraseIndex + delta;
+    goLive(Math.max(0, Math.min(next, count - 1)));
+}
+
+// Send a verse of the selected song to the projector
+function goLive(index) {
+    if (!selectedSong || index < 0 || index >= selectedSong.phrases.length) return;
+    const song = selectedSong;
+    const items = phrasesSection.querySelectorAll('.phrase-item');
+    items.forEach((p, i) => p.classList.toggle('active', i === index));
+    activePhraseIndex = index;
+    updateTransport();
+    items[index].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    
+    let nextVersePreview = null;
+    if (index < song.phrases.length - 1) {
+        nextVersePreview = phraseToText(song.phrases[index + 1]).split('\n')[0] || null;
+    }
+    
+    sendToProjector({
+        type: 'song_phrase',
+        text: phraseToText(song.phrases[index]),
+        fontSize: currentFontSize,
+        songTitle: song.title,
+        nextVersePreview: nextVersePreview
+    });
+}
+
+function showBlank() {
+    sendToProjector({ type: 'blank', text: '', fontSize: currentFontSize });
+    clearActivePhrase();
+}
+
+function isModalOpen() {
+    return document.querySelector('.modal.show') !== null;
+}
+
+// Global keyboard shortcuts for live operation
+function handleShortcut(e) {
+    if (e.metaKey || e.ctrlKey || e.altKey || isModalOpen()) return;
+    const target = e.target;
+    const typing = target instanceof Element && target.matches('input, textarea, select, [contenteditable="true"]');
+    
+    if (typing) {
+        if (e.key === 'Escape' && target === songSearch) {
+            songSearch.blur();
+            if (isSheetMode()) closeSongSheet();
+        } else if (e.key === 'Enter' && target === songSearch) {
+            const first = songList.querySelector('.song-item');
+            if (first) first.click();
+            songSearch.blur();
+        }
+        return;
+    }
+    
+    const count = selectedSong ? selectedSong.phrases.length : 0;
+    switch (e.key) {
+        case 'ArrowDown':
+        case 'ArrowRight':
+        case 'PageDown':
+        case ' ':
+            if (!count) return;
+            e.preventDefault();
+            stepPhrase(1);
+            break;
+        case 'ArrowUp':
+        case 'ArrowLeft':
+        case 'PageUp':
+            if (!count) return;
+            e.preventDefault();
+            stepPhrase(-1);
+            break;
+        case 'Home':
+            if (!count) return;
+            e.preventDefault();
+            goLive(0);
+            break;
+        case 'End':
+            if (!count) return;
+            e.preventDefault();
+            goLive(count - 1);
+            break;
+        case 'b':
+        case 'B':
+        case '.':
+            e.preventDefault();
+            showBlank();
+            break;
+        case 'w':
+        case 'W':
+            e.preventDefault();
+            showWelcomeScreenBtn.click();
+            break;
+        case '/':
+        case 's':
+        case 'S':
+            e.preventDefault();
+            openSongSheet();
+            break;
+    }
+}
+
+const isSheetMode = () => window.matchMedia('(max-width: 959px)').matches;
+
+function openSongSheet() {
+    if (!isSheetMode()) {
+        songSearch.focus();
+        songSearch.select();
+        return;
+    }
+    operatorSidebar.classList.add('mobile-open');
+    mobileMenuOverlay.classList.add('active');
+    openSongsBtn.setAttribute('aria-expanded', 'true');
+    // Wait for the slide-in so iOS doesn't jump the page while opening the keyboard
+    setTimeout(() => songSearch.focus({ preventScroll: true }), 260);
+}
+
+function closeSongSheet() {
+    operatorSidebar.classList.remove('mobile-open');
+    operatorSidebar.style.transform = '';
+    mobileMenuOverlay.classList.remove('active');
+    openSongsBtn.setAttribute('aria-expanded', 'false');
+    if (document.activeElement === songSearch) songSearch.blur();
+}
+
+// Drag the sheet handle down to dismiss
+function setupSongSheet() {
+    openSongsBtn.addEventListener('click', openSongSheet);
+    mobileMenuOverlay.addEventListener('click', closeSongSheet);
+    window.closeMobileMenuOnSelection = () => {
+        if (isSheetMode()) closeSongSheet();
+    };
+
+    let startY = 0;
+    let deltaY = 0;
+    let startTime = 0;
+    let dragging = false;
+
+    sheetHandle.addEventListener('pointerdown', (e) => {
+        if (!isSheetMode()) return;
+        dragging = true;
+        startY = e.clientY;
+        deltaY = 0;
+        startTime = performance.now();
+        operatorSidebar.classList.add('dragging');
+        sheetHandle.setPointerCapture(e.pointerId);
+    });
+
+    sheetHandle.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        deltaY = Math.max(0, e.clientY - startY);
+        operatorSidebar.style.transform = `translateY(${deltaY}px)`;
+    });
+
+    const endDrag = () => {
+        if (!dragging) return;
+        dragging = false;
+        operatorSidebar.classList.remove('dragging');
+        const velocity = deltaY / Math.max(1, performance.now() - startTime);
+        if (deltaY > operatorSidebar.offsetHeight * 0.25 || velocity > 0.5) {
+            closeSongSheet();
+        } else {
+            operatorSidebar.style.transform = '';
+        }
+    };
+    sheetHandle.addEventListener('pointerup', endDrag);
+    sheetHandle.addEventListener('pointercancel', endDrag);
+    sheetHandle.addEventListener('click', () => {
+        if (deltaY < 4) closeSongSheet();
+    });
+}
+
 // Setup event listeners
 function setupEventListeners() {
+    document.addEventListener('keydown', handleShortcut);
+    
+    if (blankQuickBtn) {
+        blankQuickBtn.addEventListener('click', showBlank);
+    }
+    prevPhraseBtn.addEventListener('click', () => stepPhrase(-1));
+    nextPhraseBtn.addEventListener('click', () => stepPhrase(1));
+    
     // Tab switching
     document.querySelectorAll('.tab-button').forEach(button => {
         button.addEventListener('click', () => {
@@ -321,43 +588,8 @@ function setupEventListeners() {
         });
     }
     
-    // Mobile menu toggle
-    if (mobileMenuToggle && operatorSidebar && mobileMenuOverlay) {
-        mobileMenuToggle.addEventListener('click', () => {
-            operatorSidebar.classList.toggle('mobile-open');
-            mobileMenuOverlay.classList.toggle('active');
-            
-            // Update button icon
-            if (operatorSidebar.classList.contains('mobile-open')) {
-                mobileMenuToggle.innerHTML = '✕';
-                mobileMenuToggle.setAttribute('aria-label', 'Close menu');
-            } else {
-                mobileMenuToggle.innerHTML = '☰';
-                mobileMenuToggle.setAttribute('aria-label', 'Toggle menu');
-            }
-        });
-        
-        // Close mobile menu when clicking on overlay
-        mobileMenuOverlay.addEventListener('click', () => {
-            operatorSidebar.classList.remove('mobile-open');
-            mobileMenuOverlay.classList.remove('active');
-            mobileMenuToggle.innerHTML = '☰';
-            mobileMenuToggle.setAttribute('aria-label', 'Toggle menu');
-        });
-        
-        // Close mobile menu when song is selected
-        const closeMobileMenuOnSelection = () => {
-            if (window.innerWidth <= 768 && operatorSidebar.classList.contains('mobile-open')) {
-                operatorSidebar.classList.remove('mobile-open');
-                mobileMenuOverlay.classList.remove('active');
-                mobileMenuToggle.innerHTML = '☰';
-                mobileMenuToggle.setAttribute('aria-label', 'Toggle menu');
-            }
-        };
-        
-        // Store the function for use in selectSong
-        window.closeMobileMenuOnSelection = closeMobileMenuOnSelection;
-    }
+    // Song library: bottom sheet on mobile, persistent sidebar on desktop
+    setupSongSheet();
     
     // Song search with Singlish support
     songSearch.addEventListener('input', (e) => {
@@ -445,9 +677,7 @@ function setupEventListeners() {
             sendToProjector(content);
             
             // Clear active phrase
-            document.querySelectorAll('.phrase-item').forEach(p => {
-                p.classList.remove('active');
-            });
+            clearActivePhrase();
         });
     });
     
@@ -462,9 +692,7 @@ function setupEventListeners() {
             });
             
             // Clear active phrase
-            document.querySelectorAll('.phrase-item').forEach(p => {
-                p.classList.remove('active');
-            });
+            clearActivePhrase();
         }
     });
     
@@ -476,9 +704,7 @@ function setupEventListeners() {
         });
         
         // Clear active phrase
-        document.querySelectorAll('.phrase-item').forEach(p => {
-            p.classList.remove('active');
-        });
+        clearActivePhrase();
     });
     
     // Bulk import modal handlers
@@ -556,9 +782,7 @@ function setupEventListeners() {
                 });
                 
                 // Clear active phrase
-                document.querySelectorAll('.phrase-item').forEach(p => {
-                    p.classList.remove('active');
-                });
+                clearActivePhrase();
             }
         });
     }
@@ -676,19 +900,7 @@ function parseBulkSongs(input) {
 // Save songs to the server
 async function saveSongs(songs) {
     try {
-        const response = await fetch('/api/save-songs', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ songs: songs })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
-        }
-        
-        return await response.json();
+        return await apiPost('/api/save-songs', { songs: songs });
         
     } catch (error) {
         console.error('Error saving songs:', error);
@@ -739,9 +951,11 @@ function clearSongSelection() {
         <div class="no-song-selected">
             <div class="empty-state-icon">🎵</div>
             <h3>No Song Selected</h3>
-            <p>Open the menu and select a song to view its phrases</p>
+            <p>Tap <strong>Songs</strong> to find a song.</p>
         </div>
     `;
+    activePhraseIndex = -1;
+    updateTransport();
 }
 
 // Open edit modal
@@ -828,26 +1042,10 @@ async function saveEditedSong() {
     try {
         showEditStatus('Saving changes...', 'info');
         
-        const response = await fetch('/api/update-song', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                oldFilename: currentEditingSong.filename,
-                song: updatedSong
-            })
+        const result = await apiPost('/api/update-song', {
+            oldFilename: currentEditingSong.filename,
+            song: updatedSong
         });
-        
-        console.log('Response status:', response.status);
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Server error response:', errorText);
-            throw new Error(`Server error: ${response.status}`);
-        }
-        
-        const result = await response.json();
         console.log('Result:', result);
         
         if (result.success) {
@@ -884,21 +1082,9 @@ async function deleteSong() {
     try {
         showEditStatus('Deleting song...', 'info');
         
-        const response = await fetch('/api/delete-song', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                filename: currentEditingSong.filename
-            })
+        const result = await apiPost('/api/delete-song', {
+            filename: currentEditingSong.filename
         });
-        
-        if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
-        }
-        
-        const result = await response.json();
         
         if (result.success) {
             showEditStatus('Song deleted successfully!', 'success');

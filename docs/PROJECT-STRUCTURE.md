@@ -38,10 +38,8 @@ PresentationApp/
 │   │   │                            # - Handles file serving
 │   │   │                            # - WebSocket communication
 │   │   │                            # - Song management API
-│   │   └── server-optimized.py      # Optimized version for Azure
 │   │                                # - Gzip compression
 │   │                                # - Aggressive caching
-│   │                                # - Better Azure performance
 │   │
 │   └── songs/                        # Song library (JSON files)
 │       ├── amazing-grace.json       # Song format: multi-line verses
@@ -54,68 +52,8 @@ PresentationApp/
 │   ├── local/                        # Local network deployment
 │   │   └── README.md                # Local deployment guide
 │   │
-│   ├── azure/                        # Azure Cloud deployment
-│   │   ├── README.md                # Azure deployment guide
-│   │   ├── deploy-azure-container.ps1
-│   │   ├── deploy-azure-container.sh
-│   │   ├── azure-start.ps1
-│   │   ├── azure-start.sh
-│   │   ├── azure-stop.ps1
-│   │   ├── azure-stop.sh
-│   │   ├── register-azure-providers.ps1
-│   │   ├── register-azure-providers.sh
-│   │   ├── server-azure.py          # Azure-specific server config
-│   │   ├── web.config               # IIS configuration
-│   │   └── ... (other Azure files)
-│   │
-│   └── pyinstaller/                  # Windows executable build
-│       ├── README.md                # PyInstaller build guide
-│       ├── build-executable.ps1     # PowerShell build script
-│       ├── PYINSTALLER-GUIDE.md     # Detailed build guide
-│       ├── QUICK-START-EXECUTABLE.txt
-│       └── ... (build artifacts)
-│
-├── docs/                             # Documentation files
-│   ├── PROJECT-STRUCTURE.md         # This file
-│   ├── QUICK-START.md               # Getting started guide
-│   ├── SINGLISH-SEARCH-GUIDE.md    # Singlish search documentation
-│   ├── MULTI-LINE-SONG-FORMAT.md   # Song format specification
-│   ├── SONG-EDIT-FEATURE.md        # Song editing guide
-│   ├── MOBILE-RESPONSIVE-REDESIGN.md
-│   ├── DOCKER-TROUBLESHOOTING.md
-│   ├── PERFORMANCE-OPTIMIZATION.md
-│   └── ... (other documentation)
-│
-├── build/                            # PyInstaller build outputs
-│   ├── build-executable.ps1         # Build script (copy in deployment/)
-│   ├── dist/                        # Compiled executable output
-│   │   └── ChurchApp.exe            # Standalone Windows executable
-│   ├── build/                       # Build temporary files
-│   └── ... (PyInstaller artifacts)
-│
-├── build-dist/                       # Build distribution
-│   ├── Church-Presentation-Server.spec
-│   └── build/
-│
-├── ChurchApp-Standalone/             # Example standalone package
-│   └── ChurchApp.exe
-│
-├── .git/                             # Git repository
-├── .gitignore                        # Git ignore rules
-├── .dockerignore                     # Docker ignore rules
-│
-├── Dockerfile                        # Docker container definition
-├── docker-compose.yml                # Docker Compose configuration
-│
-├── start.bat                         # Windows startup script
-├── startup.sh                        # Linux/macOS startup script
-│
-├── requirements.txt                  # Python dependencies
-├── runtime.txt                       # Runtime specification
-│
-├── README.md                         # Main project README
-└── [other config files]
-```
+│   └── native/                       # Native builds (Windows/macOS/Linux)
+│       └── README.md                # Native build guide
 
 ---
 
@@ -155,12 +93,6 @@ Server-side Python code:
   - Song management API endpoints
   - JSON upload/download
 
-- **server-optimized.py**
-  - Azure-optimized version
-  - Gzip compression
-  - Aggressive caching
-  - Better performance metrics
-
 ### src/songs/ (Song Library)
 
 JSON files containing song data:
@@ -175,8 +107,8 @@ JSON files containing song data:
 Separated by deployment method:
 
 - **local/** - Local network instructions
-- **azure/** - Cloud deployment scripts
-- **pyinstaller/** - Windows executable creation
+- **docker/** - Container deployment
+- **native/** - Native builds for Windows/macOS/Linux
 
 ### docs/
 
@@ -249,8 +181,7 @@ Response: Song JSON data
 ### In Deployment Folders
 
 - **local/README.md** - How to set up local network
-- **azure/README.md** - How to deploy to Azure
-- **pyinstaller/README.md** - How to build Windows .exe
+- **native/README.md** - How to build native executables
 
 ---
 
@@ -309,9 +240,6 @@ PYTHONUNBUFFERED=1      # Enable unbuffered output
 
 # WebSocket Server
 WEBSOCKET_PORT=8765     # Default: 8765
-
-# Azure specific
-PORT=8000               # Azure override for HTTP_PORT
 ```
 
 ---
@@ -328,7 +256,7 @@ Dockerfile:
 │   ├── Copy packages
 │   ├── Copy src/ (application)
 │   ├── Copy deployment/ (scripts)
-│   └── Run: python src/server/server-optimized.py
+│   └── Run: python src/server/server.py
 ```
 
 ### Volume Mounts
@@ -359,7 +287,7 @@ volumes:
 
 ### Build Consistency
 
-When using PyInstaller or Docker:
+When using a native build or Docker:
 
 1. Always include the `src/` directory
 2. Songs need to be bundled or mounted
@@ -406,17 +334,10 @@ Server endpoint: src/server/server.py
 - Python installed on server PC
 - Run: `python src/server/server.py`
 
-### Azure Container
-- Docker image required
-- Runs in cloud
-- Port 8000 exposed
-- Uses `server-optimized.py`
-
-### Windows Executable
-- PyInstaller bundles Python
-- Single .exe file
+### Native Build
+- Bundles Python
+- Single executable per platform (Windows/macOS/Linux)
 - No additional installation
-- Portable across Windows PCs
 
 ---
 
@@ -427,14 +348,11 @@ Server endpoint: src/server/server.py
 Old → New mapping:
 ```
 server.py → src/server/server.py
-server-optimized.py → src/server/server-optimized.py
 *.html → src/static/*.html
 css/ → src/static/css/
 js/ → src/static/js/
 images/ → src/static/images/
 songs/ → src/songs/
-azure/ → deployment/azure/
-build/ → deployment/pyinstaller/
 ```
 
 ### Startup Script Changes
@@ -475,5 +393,5 @@ python src/server/server.py
 
 - [Read Main README](../README.md)
 - [Local Deployment Guide](../deployment/local/README.md)
-- [Azure Deployment Guide](../deployment/azure/README.md)
-- [PyInstaller Build Guide](../deployment/pyinstaller/README.md)
+- [Docker Deployment Guide](../deployment/docker/README.md)
+- [Native Builds](../deployment/native/README.md)

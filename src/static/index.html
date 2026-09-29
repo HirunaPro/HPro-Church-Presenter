@@ -3,66 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Church Presentation App - Worship Service Display System">
-    <title>Church Presentation App</title>
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="Presenter - show lyrics and slides on a big screen">
+    <title>Presenter</title>
+    <link rel="stylesheet" href="css/landing.css">
 </head>
 <body>
-    <div class="landing-container">
-        <div class="landing-header">
-            <h1>Church Presentation App</h1>
-            <p>Worship Service Display System</p>
+<main class="wrap">
+    <header class="hero">
+        <svg class="logo" viewBox="0 0 64 64" role="img" aria-label="Presenter logo" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="10" width="52" height="34" rx="4"/><path d="M22 54h20M32 44v10"/><path d="M18 22h28M18 30h20"/>
+        </svg>
+        <h1>Presenter</h1>
+        <p>Lyrics and slides on the big screen, controlled from any device.</p>
+        <div class="status" aria-live="polite">
+            <span class="pill" id="serverPill" data-state="pending"><span class="dot" aria-hidden="true"></span><span id="serverText">Checking server...</span></span>
+            <span class="pill" id="authPill" data-state="pending"><span class="dot" aria-hidden="true"></span><span id="authText">Checking operator key...</span></span>
+            <span class="hint" id="authHint" hidden>Anyone on your network can control slides. Set the <code>OPERATOR_KEY</code> environment variable and restart to protect it.</span>
         </div>
-        
-        <div class="landing-buttons">
-            <a href="operator.html" class="landing-button operator">
-                Open Operator Control
-            </a>
-            <a href="projector.html" class="landing-button projector">
-                Open Projector Display
-            </a>
-        </div>
-        
-        <div class="landing-info">
-            <h3>Access Instructions</h3>
-            <p>This application is running on:</p>
-            <div class="ip-address" id="ipAddress">Loading...</div>
-            <p>To access from other devices on the same WiFi network:</p>
-            <p>1. Connect to the same WiFi network</p>
-            <p>2. Open a web browser</p>
-            <p>3. Navigate to the address shown above</p>
-            <p style="margin-top: 20px; font-size: 0.9em; color: #666;">
-                <strong>Tip:</strong> Open the Operator Control on this device and 
-                the Projector Display on the device connected to the projector.
-            </p>
-        </div>
-    </div>
+    </header>
 
-    <script>
-        // Get and display local IP address
-        async function getLocalIP() {
-            try {
-                // Attempt to fetch from server (if server provides this endpoint)
-                // For now, we'll show the current location
-                const currentURL = window.location.href.replace('index.html', '');
-                document.getElementById('ipAddress').textContent = currentURL;
-                
-                // Also try to detect actual IP
-                const response = await fetch('/server-info.json').catch(() => null);
-                if (response && response.ok) {
-                    const data = await response.json();
-                    document.getElementById('ipAddress').textContent = 
-                        `http://${data.ip}:${data.port}/index.html`;
-                }
-            } catch (error) {
-                // Fallback to showing current location
-                const currentURL = window.location.href;
-                document.getElementById('ipAddress').textContent = currentURL;
+    <nav class="cards" aria-label="Choose a screen">
+        <a class="card" href="operator.html" aria-label="Open Operator Control">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/><path d="M10 8l5 3-5 3z"/></svg>
+            <h2>Operator Control</h2>
+            <p>For the person running the slides. Works on phone, tablet or laptop.</p>
+            <span class="go">Open operator &rarr;</span>
+        </a>
+        <a class="card" href="projector.html" aria-label="Open Projector Display">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            <h2>Projector Display</h2>
+            <p>Open on the projector computer, then press <kbd>F11</kbd> for fullscreen.</p>
+            <span class="go">Open projector &rarr;</span>
+        </a>
+    </nav>
+
+    <section class="block" aria-labelledby="connectH">
+        <h2 id="connectH">Connect other devices</h2>
+        <p class="muted">Devices must be on the same WiFi network as this computer. Open this address on them:</p>
+        <div class="urlrow">
+            <div class="url" id="origin" aria-label="Server address"></div>
+            <button type="button" class="copy" id="copyBtn" aria-label="Copy server address">Copy</button>
+        </div>
+        <p class="notice" id="localNotice" hidden>You are using <strong>localhost</strong>, which only works on this computer. On other devices use this computer's network IP address (for example <code>http://192.168.x.x:8000</code>), printed in the server console when it starts.</p>
+        <p class="muted" id="copyMsg" role="status"></p>
+    </section>
+
+    <section class="block" aria-labelledby="howH">
+        <h2 id="howH">How to use</h2>
+        <ol class="steps">
+            <li><span>Open the <strong>Projector Display</strong> on the projector computer and press <kbd>F11</kbd>.</span></li>
+            <li><span>Open <strong>Operator Control</strong> on your phone, tablet or laptop.</span></li>
+            <li><span>Pick a song or slide, then click a line to show it on the projector.</span></li>
+        </ol>
+    </section>
+</main>
+
+<script>
+(function () {
+    var origin = window.location.origin;
+    var host = window.location.hostname;
+    document.getElementById('origin').textContent = origin;
+    if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1') {
+        document.getElementById('localNotice').hidden = false;
+    }
+
+    function setPill(id, state, text) {
+        document.getElementById(id + 'Pill').setAttribute('data-state', state);
+        document.getElementById(id + 'Text').textContent = text;
+    }
+
+    fetch('/api/config', { cache: 'no-store' })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (cfg) {
+            setPill('server', 'ok', 'Server connected');
+            if (cfg.authRequired) {
+                setPill('auth', 'ok', 'Operator key protection on');
+            } else {
+                setPill('auth', 'warn', 'Operator key protection off');
+                document.getElementById('authHint').hidden = false;
             }
-        }
+        })
+        .catch(function () {
+            setPill('server', 'bad', 'Server unreachable');
+            setPill('auth', 'bad', 'Operator key status unknown');
+        });
 
-        // Load IP on page load
-        getLocalIP();
-    </script>
+    var msg = document.getElementById('copyMsg');
+    document.getElementById('copyBtn').addEventListener('click', function () {
+        function done(ok) { msg.textContent = ok ? 'Address copied.' : 'Copy failed. Select the address and copy it manually.'; }
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(origin).then(function () { done(true); }, function () { done(false); });
+        } else {
+            var ta = document.createElement('textarea');
+            ta.value = origin; ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            var ok = false;
+            try { ok = document.execCommand('copy'); } catch (e) {}
+            document.body.removeChild(ta);
+            done(ok);
+        }
+    });
+})();
+</script>
 </body>
 </html>

@@ -1,461 +1,423 @@
 #!/usr/bin/env python3
 """
 Church Presentation Web App Server
-Runs both HTTP server and WebSocket server concurrently
+Runs the HTTP server and the WebSocket relay concurrently.
+
+Environment:
+  HTTP_PORT / PORT   HTTP port (default 8000)
+  WEBSOCKET_PORT     WebSocket port (default 8765)
+  OPERATOR_KEY       Optional shared secret for write APIs and WS broadcasting
 """
 
 import asyncio
+import gzip
+import hashlib
+import hmac
 import http.server
-import socketserver
-import threading
 import json
-import socket
 import os
+import socket
+import tempfile
+import threading
+import unicodedata
+from email.utils import formatdate
+from http.server import ThreadingHTTPServer
 from pathlib import Path
-import websockets
+from urllib.parse import unquote, urlsplit, parse_qs
 
-# Configuration
-HTTP_PORT = 8000
-WEBSOCKET_PORT = 8765
+import shutil
+import sys
 
-# Store connected WebSocket clients
+from websockets.asyncio.server import serve as ws_serve
+from websockets.exceptions import ConnectionClosed
+
+HTTP_PORT = int(os.environ.get('HTTP_PORT', os.environ.get('PORT', 8000)))
+WEBSOCKET_PORT = int(os.environ.get('WEBSOCKET_PORT', 8765))
+OPERATOR_KEY = os.environ.get('OPERATOR_KEY', '')
+
+FROZEN = getattr(sys, 'frozen', False)
+if FROZEN:
+    # PyInstaller: bundle data as 'static' and 'songs' inside the archive.
+    # Songs must be writable, so they live next to the executable.
+    _BUNDLE = Path(getattr(sys, '_MEIPASS', Path(sys.executable).parent))
+    _DEFAULT_STATIC = _BUNDLE / 'static'
+    _DEFAULT_SONGS = Path(sys.executable).resolve().parent / 'songs'
+else:
+    _BASE = Path(__file__).resolve().parent.parent
+    _DEFAULT_STATIC = _BASE / 'static'
+    _DEFAULT_SONGS = _BASE / 'songs'
+STATIC_DIR = Path(os.environ.get('STATIC_DIR', _DEFAULT_STATIC))
+SONGS_DIR = Path(os.environ.get('SONGS_DIR', _DEFAULT_SONGS))
+
+
+def seed_songs():
+    """When frozen, copy bundled songs into the writable songs dir on first run."""
+    if not FROZEN or 'SONGS_DIR' in os.environ:
+        return
+    bundled = _BUNDLE / 'songs'
+    if SONGS_DIR.exists() or not bundled.is_dir():
+        SONGS_DIR.mkdir(parents=True, exist_ok=True)
+        return
+    shutil.copytree(bundled, SONGS_DIR)
+
+MAX_BODY = 5 * 1024 * 1024
+GZIP_EXTS = ('.html', '.css', '.js', '.json', '.svg', '.xml', '.txt')
+
 connected_clients = set()
-
-# Change to the static directory for serving files
-STATIC_DIR = Path(__file__).parent.parent / 'static'
-SONGS_DIR = Path(__file__).parent.parent / 'songs'
-
-# Change working directory to static for HTTP server
-os.chdir(STATIC_DIR)
+operator_clients = set()
 
 
 def get_local_ip():
-    """Get the local IP address of this machine"""
     try:
-        # Create a socket to determine the local IP
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
-        local_ip = s.getsockname()[0]
+        ip = s.getsockname()[0]
         s.close()
-        return local_ip
+        return ip
     except Exception:
         return "localhost"
 
 
-class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
-    """Custom HTTP request handler with CORS support"""
-    
-    def end_headers(self):
-        # Add CORS headers
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        
-        # Disable caching for welcome.html to always show latest content
-        if self.path.endswith('welcome.html') or 'welcome.html' in self.path:
-            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
-            self.send_header('Pragma', 'no-cache')
-            self.send_header('Expires', '0')
-        
-        super().end_headers()
-    
-    def do_GET(self):
-        """Handle GET requests, including special routing for songs"""
-        # Handle songs directory
-        if self.path.startswith('/songs/'):
-            song_filename = self.path[7:]  # Remove '/songs/' prefix
-            if song_filename == '':
-                # List songs directory
-                self.list_songs_directory()
-                return
-            else:
-                # Serve specific song file
-                self.serve_song_file(song_filename)
-                return
-        
-        # Default behavior for other files
-        super().do_GET()
-    
-    def list_songs_directory(self):
-        """List all songs in JSON format"""
+def nfc(s):
+    return unicodedata.normalize('NFC', s)
+
+
+def safe_song_path(name):
+    """Return a resolved path inside SONGS_DIR for a song filename, or None if invalid.
+
+    Matches NFC/NFD variants of existing filenames (macOS stores NFD).
+    """
+    if not isinstance(name, str) or not name:
+        return None
+    name = unquote(name)
+    if '\x00' in name or '/' in name or '\\' in name or '..' in name:
+        return None
+    if not name.lower().endswith('.json') or name.startswith('.'):
+        return None
+    root = SONGS_DIR.resolve()
+    candidate = (root / name).resolve()
+    if candidate.parent != root:
+        return None
+    if not candidate.exists():
+        target = nfc(name)
         try:
-            songs = []
-            if SONGS_DIR.exists():
-                for song_file in sorted(SONGS_DIR.glob('*.json')):
-                    songs.append(song_file.name)
-            
-            response = json.dumps(songs)
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header('Content-Length', len(response))
-            self.end_headers()
-            self.wfile.write(response.encode('utf-8'))
+            for f in root.iterdir():
+                if nfc(f.name) == target:
+                    return f.resolve() if f.resolve().parent == root else None
+        except OSError:
+            pass
+        # Not existing: use the NFC name so new files are consistently named
+        candidate = (root / target).resolve()
+        if candidate.parent != root:
+            return None
+    return candidate
+
+
+def generate_filename(title):
+    """Generate a filename from song title (NFC, Unicode letters kept)."""
+    title = nfc(str(title or '')).lower()
+    slug = ''.join(c if (c.isalnum() or c in ' -' or unicodedata.category(c).startswith('M')) else '' for c in title)
+    slug = slug.replace(' ', '-')
+    while '--' in slug:
+        slug = slug.replace('--', '-')
+    slug = slug.strip('-')
+    if not slug:
+        digest = hashlib.sha1(str(title).encode('utf-8')).hexdigest()[:8]
+        slug = f"song-{digest}"
+    return f"{slug}.json"
+
+
+def write_json_atomic(path, obj):
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            json.dump(obj, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+class HttpError(Exception):
+    def __init__(self, code, message):
+        self.code = code
+        self.message = message
+
+
+class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=str(STATIC_DIR), **kwargs)
+
+    def end_headers(self):
+        path = urlsplit(self.path).path.lower()
+        if path.startswith('/api/') or path.startswith('/songs/') or path.endswith('.html') or path == '/':
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        elif path.endswith(('.js', '.css')):
+            self.send_header('Cache-Control', 'no-cache')
+        super().end_headers()
+
+    # ---- helpers ----
+    def _send_json(self, code, obj, extra_headers=None):
+        body = json.dumps(obj).encode('utf-8')
+        self._send_bytes(code, body, 'application/json', extra_headers)
+
+    def _send_bytes(self, code, body, ctype, extra_headers=None):
+        if 'gzip' in self.headers.get('Accept-Encoding', '').lower() and len(body) > 256:
+            z = gzip.compress(body, compresslevel=6)
+            if len(z) < len(body):
+                body = z
+                extra_headers = dict(extra_headers or {}, **{'Content-Encoding': 'gzip'})
+        self.send_response(code)
+        self.send_header('Content-Type', ctype)
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Vary', 'Accept-Encoding')
+        for k, v in (extra_headers or {}).items():
+            self.send_header(k, v)
+        self.end_headers()
+        if self.command != 'HEAD':
+            self.wfile.write(body)
+
+    def _authorized(self):
+        if not OPERATOR_KEY:
+            return True
+        supplied = self.headers.get('X-Operator-Key', '')
+        return hmac.compare_digest(supplied.encode('utf-8'), OPERATOR_KEY.encode('utf-8'))
+
+    def _read_json_body(self):
+        raw = self.headers.get('Content-Length')
+        try:
+            length = int(raw)
+            if length < 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            raise HttpError(400, "Missing or invalid Content-Length")
+        if length > MAX_BODY:
+            raise HttpError(413, "Request body too large")
+        try:
+            data = json.loads(self.rfile.read(length).decode('utf-8'))
+        except (ValueError, UnicodeDecodeError):
+            raise HttpError(400, "Invalid JSON")
+        if not isinstance(data, dict):
+            raise HttpError(400, "JSON object expected")
+        return data
+
+    # ---- GET ----
+    def do_GET(self):
+        path = urlsplit(self.path).path
+        if path == '/api/config':
+            return self._send_json(200, {'wsPort': WEBSOCKET_PORT, 'authRequired': bool(OPERATOR_KEY)})
+        if path.startswith('/songs/'):
+            name = path[7:]
+            if name == '':
+                return self.list_songs_directory()
+            return self.serve_song_file(name)
+        return self.serve_static()
+
+    def serve_static(self):
+        can_gzip = 'gzip' in self.headers.get('Accept-Encoding', '').lower()
+        fs_path = self.translate_path(self.path)
+        if can_gzip and os.path.isfile(fs_path) and fs_path.endswith(GZIP_EXTS):
+            try:
+                with open(fs_path, 'rb') as f:
+                    content = f.read()
+                z = gzip.compress(content, compresslevel=6)
+                self.send_response(200)
+                self.send_header('Content-Type', self.guess_type(fs_path))
+                self.send_header('Content-Encoding', 'gzip')
+                self.send_header('Vary', 'Accept-Encoding')
+                self.send_header('Content-Length', str(len(z)))
+                self.send_header('Last-Modified', formatdate(os.path.getmtime(fs_path), usegmt=True))
+                self.end_headers()
+                self.wfile.write(z)
+                return
+            except OSError:
+                pass
+        return super().do_GET()
+
+    def list_songs_directory(self):
+        try:
+            names = sorted(nfc(p.name) for p in SONGS_DIR.glob('*.json')) if SONGS_DIR.exists() else []
+            self._send_json(200, names)
         except Exception as e:
             print(f"[HTTP] Error listing songs: {e}")
             self.send_error(500, "Internal Server Error")
-    
-    def serve_song_file(self, filename):
-        """Serve a specific song file"""
+
+    def serve_song_file(self, name):
+        p = safe_song_path(name)
+        if p is None:
+            return self._send_json(400, {'success': False, 'message': 'invalid filename'})
         try:
-            from urllib.parse import unquote
-            filename = unquote(filename)
-            filepath = SONGS_DIR / filename
-            
-            if not filepath.exists():
-                self.send_error(404, "Song not found")
-                return
-            
-            with open(filepath, 'rb') as f:
-                content = f.read()
-            
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header('Content-Length', len(content))
-            self.end_headers()
-            self.wfile.write(content)
+            if not p.is_file():
+                return self.send_error(404, "Song not found")
+            self._send_bytes(200, p.read_bytes(), 'application/json')
         except Exception as e:
             print(f"[HTTP] Error serving song file: {e}")
             self.send_error(500, "Internal Server Error")
-    
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self.end_headers()
-    
-    def do_POST(self):
-        """Handle POST requests"""
-        if self.path == '/api/save-songs':
-            self.handle_save_songs()
-        elif self.path == '/api/update-song':
-            self.handle_update_song()
-        elif self.path == '/api/delete-song':
-            self.handle_delete_song()
-        else:
-            self.send_error(404, "Endpoint not found")
-    
-    def handle_save_songs(self):
-        """Handle saving bulk songs"""
-        try:
-            # Read the request body
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
-            
-            songs = data.get('songs', [])
-            saved_count = 0
-            skipped_count = 0
-            
-            # Create songs directory if it doesn't exist
-            SONGS_DIR.mkdir(exist_ok=True)
-            
-            for song in songs:
-                # Generate filename from title
-                filename = self.generate_filename(song['title'])
-                filepath = SONGS_DIR / filename
-                
-                # Skip if file already exists
-                if filepath.exists():
-                    print(f"[HTTP] Song '{song['title']}' already exists, skipping")
-                    skipped_count += 1
-                    continue
-                
-                # Save the song
-                with open(filepath, 'w', encoding='utf-8') as f:
-                    json.dump(song, f, indent=2, ensure_ascii=False)
-                
-                print(f"[HTTP] Saved song: {filename}")
-                saved_count += 1
-            
-            # Send response
-            response = {
-                'success': True,
-                'saved': saved_count,
-                'skipped': skipped_count,
-                'total': len(songs)
-            }
-            
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps(response).encode('utf-8'))
-            
-        except Exception as e:
-            print(f"[HTTP] Error saving songs: {e}")
-            error_response = {
-                'success': False,
-                'message': str(e)
-            }
-            
-            self.send_response(500)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps(error_response).encode('utf-8'))
-    
-    def generate_filename(self, title):
-        """Generate a filename from song title"""
-        # Convert to lowercase
-        filename = title.lower()
-        # Replace spaces and special characters with hyphens
-        filename = ''.join(c if c.isalnum() or c in ' -' else '' for c in filename)
-        filename = filename.replace(' ', '-')
-        # Remove multiple consecutive hyphens
-        while '--' in filename:
-            filename = filename.replace('--', '-')
-        # Remove leading/trailing hyphens
-        filename = filename.strip('-')
-        # Add .json extension
-        filename = f"{filename}.json"
-        return filename
-    
-    def handle_update_song(self):
-        """Handle updating a song"""
-        try:
-            print("[HTTP] ===== UPDATE SONG REQUEST =====")
-            
-            # Read the request body
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
-            
-            print(f"[HTTP] Raw request data keys: {data.keys()}")
-            
-            old_filename = data.get('oldFilename')
-            song = data.get('song')
-            
-            print(f"[HTTP] Old filename (before decode): {old_filename}")
-            print(f"[HTTP] New title: {song.get('title') if song else 'N/A'}")
-            print(f"[HTTP] Number of phrases: {len(song.get('phrases', [])) if song else 0}")
-            
-            if not old_filename or not song:
-                raise ValueError("Missing required fields")
-            
-            # URL decode the filename (in case it contains Unicode characters)
-            from urllib.parse import unquote
-            old_filename = unquote(old_filename)
-            
-            print(f"[HTTP] Old filename (after decode): {old_filename}")
-            
-            old_filepath = SONGS_DIR / old_filename
-            
-            print(f"[HTTP] Old filepath: {old_filepath}")
-            print(f"[HTTP] File exists: {old_filepath.exists()}")
-            
-            # Check if old file exists
-            if not old_filepath.exists():
-                print(f"[HTTP] ERROR: File not found!")
-                print(f"[HTTP] Looking for: {old_filepath.absolute()}")
-                # List files in songs directory
-                print(f"[HTTP] Files in songs dir:")
-                for f in SONGS_DIR.iterdir():
-                    print(f"[HTTP]   - {f.name}")
-                raise FileNotFoundError(f"Song file {old_filename} not found")
-            
-            # Generate new filename from new title
-            new_filename = self.generate_filename(song['title'])
-            new_filepath = SONGS_DIR / new_filename
-            
-            print(f"[HTTP] New filename: {new_filename}")
-            print(f"[HTTP] Filenames match: {old_filename == new_filename}")
-            
-            # Save the song content for verification
-            print(f"[HTTP] Song content:")
-            print(f"[HTTP]   Title: {song['title']}")
-            print(f"[HTTP]   Phrases: {len(song['phrases'])} verses")
-            for i, phrase in enumerate(song['phrases']):
-                print(f"[HTTP]     Verse {i+1}: {len(phrase)} lines")
-            
-            # If title changed, delete old file
-            if old_filename != new_filename:
-                print(f"[HTTP] Title changed - deleting old file")
-                old_filepath.unlink()
-                print(f"[HTTP] Deleted old song file: {old_filename}")
-            else:
-                print(f"[HTTP] Title unchanged - overwriting same file")
-            
-            # Save updated song
-            print(f"[HTTP] Writing to: {new_filepath.absolute()}")
-            with open(new_filepath, 'w', encoding='utf-8') as f:
-                json.dump(song, f, indent=2, ensure_ascii=False)
-            
-            print(f"[HTTP] ✓ File written successfully!")
-            
-            # Verify the file was written
-            if new_filepath.exists():
-                file_size = new_filepath.stat().st_size
-                print(f"[HTTP] ✓ File exists, size: {file_size} bytes")
-            else:
-                print(f"[HTTP] ✗ WARNING: File does not exist after write!")
-            
-            print(f"[HTTP] ===== UPDATE COMPLETE =====")
-            
-            # Send response
-            response = {
-                'success': True,
-                'filename': new_filename
-            }
-            
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps(response).encode('utf-8'))
-            
-        except Exception as e:
-            print(f"[HTTP] ===== UPDATE FAILED =====")
-            print(f"[HTTP] Error: {e}")
-            import traceback
-            traceback.print_exc()
-            
-            error_response = {
-                'success': False,
-                'message': str(e)
-            }
-            
-            self.send_response(500)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps(error_response).encode('utf-8'))
-    
-    def handle_delete_song(self):
-        """Handle deleting a song"""
-        try:
-            # Read the request body
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
-            
-            filename = data.get('filename')
-            
-            if not filename:
-                raise ValueError("Missing filename")
-            
-            # URL decode the filename (in case it contains Unicode characters)
-            from urllib.parse import unquote
-            filename = unquote(filename)
-            
-            filepath = SONGS_DIR / filename
-            
-            # Check if file exists
-            if not filepath.exists():
-                raise FileNotFoundError(f"Song file {filename} not found")
-            
-            # Delete the file
-            filepath.unlink()
-            print(f"[HTTP] Deleted song: {filename}")
-            
-            # Send response
-            response = {
-                'success': True,
-                'message': 'Song deleted successfully'
-            }
-            
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps(response).encode('utf-8'))
-            
-        except Exception as e:
-            print(f"[HTTP] Error deleting song: {e}")
-            error_response = {
-                'success': False,
-                'message': str(e)
-            }
-            
-            self.send_response(500)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps(error_response).encode('utf-8'))
 
-    
+    # ---- POST ----
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header('Content-Length', '0')
+        self.end_headers()
+
+    def do_POST(self):
+        path = urlsplit(self.path).path
+        handlers = {
+            '/api/save-songs': self.handle_save_songs,
+            '/api/update-song': self.handle_update_song,
+            '/api/delete-song': self.handle_delete_song,
+        }
+        if path.startswith('/api/') and not self._authorized():
+            return self._send_json(401, {'success': False, 'message': 'unauthorized'})
+        handler = handlers.get(path)
+        if handler is None:
+            return self.send_error(404, "Endpoint not found")
+        try:
+            handler(self._read_json_body())
+        except HttpError as e:
+            self._send_json(e.code, {'success': False, 'message': e.message})
+        except Exception as e:
+            print(f"[HTTP] Error in {path}: {e}")
+            self._send_json(500, {'success': False, 'message': str(e)})
+
+    def handle_save_songs(self, data):
+        songs = data.get('songs', [])
+        if not isinstance(songs, list):
+            raise HttpError(400, "songs must be a list")
+        saved = skipped = 0
+        SONGS_DIR.mkdir(parents=True, exist_ok=True)
+        for song in songs:
+            if not isinstance(song, dict) or not song.get('title'):
+                raise HttpError(400, "Each song needs a title")
+            p = safe_song_path(generate_filename(song['title']))
+            if p is None:
+                raise HttpError(400, "invalid filename")
+            if p.exists():
+                skipped += 1
+                continue
+            write_json_atomic(p, song)
+            saved += 1
+        print(f"[HTTP] save-songs: saved={saved} skipped={skipped}")
+        self._send_json(200, {'success': True, 'saved': saved, 'skipped': skipped, 'total': len(songs)})
+
+    def handle_update_song(self, data):
+        old_name = data.get('oldFilename')
+        song = data.get('song')
+        if not old_name or not isinstance(song, dict) or not song.get('title'):
+            raise HttpError(400, "Missing required fields")
+        old_path = safe_song_path(old_name)
+        if old_path is None:
+            raise HttpError(400, "invalid filename")
+        if not old_path.is_file():
+            raise HttpError(404, f"Song file {old_name} not found")
+        new_name = generate_filename(song['title'])
+        new_path = safe_song_path(new_name)
+        if new_path is None:
+            raise HttpError(400, "invalid filename")
+        changed = new_path != old_path
+        if changed and new_path.exists():
+            raise HttpError(409, f"A song named {new_name} already exists")
+        write_json_atomic(new_path, song)
+        if changed:
+            old_path.unlink()
+        print(f"[HTTP] update-song: {old_path.name} -> {new_path.name}")
+        self._send_json(200, {'success': True, 'filename': new_path.name})
+
+    def handle_delete_song(self, data):
+        name = data.get('filename')
+        if not name:
+            raise HttpError(400, "Missing filename")
+        p = safe_song_path(name)
+        if p is None:
+            raise HttpError(400, "invalid filename")
+        if not p.is_file():
+            raise HttpError(404, f"Song file {name} not found")
+        p.unlink()
+        print(f"[HTTP] Deleted song: {p.name}")
+        self._send_json(200, {'success': True, 'message': 'Song deleted successfully'})
+
     def log_message(self, format, *args):
-        # Custom logging
         print(f"[HTTP] {self.address_string()} - {format % args}")
 
 
+def _ws_key(websocket):
+    req = websocket.request
+    path = req.path if req else ''
+    return parse_qs(urlsplit(path).query).get('key', [''])[0]
+
+
+def _ws_is_operator(websocket):
+    if not OPERATOR_KEY:
+        return True
+    return hmac.compare_digest(_ws_key(websocket).encode('utf-8'), OPERATOR_KEY.encode('utf-8'))
+
+
 async def websocket_handler(websocket):
-    """Handle WebSocket connections"""
-    # Register the client
+    can_send = _ws_is_operator(websocket)
     connected_clients.add(websocket)
-    print(f"[WebSocket] Client connected. Total clients: {len(connected_clients)}")
-    
+    print(f"[WebSocket] Client connected ({'operator' if can_send else 'view-only'}). Total: {len(connected_clients)}")
     try:
         async for message in websocket:
-            # Parse the message
+            if not can_send:
+                continue
             try:
-                data = json.loads(message)
-                print(f"[WebSocket] Received: {data}")
-                
-                # Broadcast to all connected clients (mainly projector)
-                disconnected = set()
-                for client in connected_clients:
-                    if client != websocket:  # Don't send back to sender
-                        try:
-                            await client.send(message)
-                        except websockets.exceptions.ConnectionClosed:
-                            disconnected.add(client)
-                
-                # Remove disconnected clients
-                connected_clients.difference_update(disconnected)
-                
-            except json.JSONDecodeError:
-                print(f"[WebSocket] Invalid JSON received: {message}")
-                
-    except websockets.exceptions.ConnectionClosed:
-        print("[WebSocket] Connection closed")
+                json.loads(message)
+            except (ValueError, TypeError):
+                print("[WebSocket] Invalid JSON received, ignoring")
+                continue
+            dead = set()
+            for client in list(connected_clients):
+                if client is not websocket:
+                    try:
+                        await client.send(message)
+                    except ConnectionClosed:
+                        dead.add(client)
+            connected_clients.difference_update(dead)
+    except ConnectionClosed:
+        pass
     finally:
-        # Unregister the client
         connected_clients.discard(websocket)
-        print(f"[WebSocket] Client disconnected. Total clients: {len(connected_clients)}")
+        print(f"[WebSocket] Client disconnected. Total: {len(connected_clients)}")
+
+
+def make_http_server(port=None):
+    return ThreadingHTTPServer(("", HTTP_PORT if port is None else port), CustomHTTPRequestHandler)
 
 
 def start_http_server():
-    """Start the HTTP server"""
-    handler = CustomHTTPRequestHandler
-    with socketserver.TCPServer(("", HTTP_PORT), handler) as httpd:
-        local_ip = get_local_ip()
-        print(f"\n{'='*60}")
-        print(f"HTTP Server running on:")
-        print(f"  - http://localhost:{HTTP_PORT}")
-        print(f"  - http://{local_ip}:{HTTP_PORT}")
-        print(f"{'='*60}\n")
-        httpd.serve_forever()
+    httpd = make_http_server()
+    httpd.daemon_threads = True
+    local_ip = get_local_ip()
+    print(f"HTTP Server: http://localhost:{HTTP_PORT}  http://{local_ip}:{HTTP_PORT}")
+    httpd.serve_forever()
 
 
 async def start_websocket_server():
-    """Start the WebSocket server"""
     local_ip = get_local_ip()
-    print(f"\n{'='*60}")
-    print(f"WebSocket Server running on:")
-    print(f"  - ws://localhost:{WEBSOCKET_PORT}")
-    print(f"  - ws://{local_ip}:{WEBSOCKET_PORT}")
-    print(f"{'='*60}\n")
-    
-    async with websockets.serve(websocket_handler, "", WEBSOCKET_PORT):
-        await asyncio.Future()  # Run forever
+    print(f"WebSocket Server: ws://localhost:{WEBSOCKET_PORT}  ws://{local_ip}:{WEBSOCKET_PORT}")
+    async with ws_serve(websocket_handler, "", WEBSOCKET_PORT):
+        await asyncio.Future()
 
 
 def main():
-    """Main entry point"""
     local_ip = get_local_ip()
-    
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("  Church Presentation Web App Server")
-    print("="*60)
-    print(f"\nStarting servers...")
-    print(f"\nAccess the application at:")
-    print(f"  http://{local_ip}:{HTTP_PORT}/index.html")
-    print(f"\nPress Ctrl+C to stop the servers\n")
-    
-    # Start HTTP server in a separate thread
-    http_thread = threading.Thread(target=start_http_server, daemon=True)
-    http_thread.start()
-    
-    # Start WebSocket server in the main thread using asyncio
+    print("=" * 60)
+    if not OPERATOR_KEY:
+        print("\n[WARNING] OPERATOR_KEY is not set: anyone on the network can edit/delete songs "
+              "and control the projector. Set OPERATOR_KEY to require a key.")
+    print(f"\nAccess the application at: http://{local_ip}:{HTTP_PORT}/index.html")
+    print("Press Ctrl+C to stop\n")
+    seed_songs()
+    threading.Thread(target=start_http_server, daemon=True).start()
     try:
         asyncio.run(start_websocket_server())
     except KeyboardInterrupt:
-        print("\n\nShutting down servers...")
-        print("Goodbye!\n")
+        print("\nShutting down servers...")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,23 @@
 // Projector Display JavaScript
 
 // Configuration
-const WEBSOCKET_URL = `ws://${window.location.hostname}:8765`;
+const DEFAULT_WS_PORT = 8765;
+const FADE_MS = 200; // keep in sync with --pj-fade in projector.css
+
+async function getWebSocketUrl() {
+    let wsPort = DEFAULT_WS_PORT;
+    try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+            const config = await res.json();
+            if (config.wsPort) wsPort = config.wsPort;
+        }
+    } catch (error) {
+        console.warn('Failed to load config, using default WebSocket port:', error);
+    }
+    const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${scheme}//${window.location.hostname}:${wsPort}`;
+}
 
 // State
 let ws = null;
@@ -9,7 +25,6 @@ let ws = null;
 // DOM Elements
 const projectorContainer = document.getElementById('projectorContainer');
 const projectorContent = document.getElementById('projectorContent');
-const churchLogo = document.getElementById('churchLogo');
 const fullscreenHint = document.getElementById('fullscreenHint');
 const nextVersePreview = document.getElementById('nextVersePreview');
 const songTitleDisplay = document.getElementById('songTitleDisplay');
@@ -50,7 +65,6 @@ function showWelcomeScreen() {
         projectorContent.innerHTML = '';
         projectorContent.appendChild(iframe);
         
-        churchLogo.style.display = 'none';
         
         // Fade in iframe after load
         iframe.onload = () => {
@@ -61,13 +75,13 @@ function showWelcomeScreen() {
         setTimeout(() => {
             iframe.style.opacity = '1';
         }, 100);
-    }, 500);
+    }, FADE_MS);
 }
 
 // WebSocket Connection
-function initWebSocket() {
+async function initWebSocket() {
     try {
-        ws = new WebSocket(WEBSOCKET_URL);
+        ws = new WebSocket(await getWebSocketUrl());
         
         ws.onopen = () => {
             console.log('Projector WebSocket connected');
@@ -117,7 +131,6 @@ function updateDisplay(content) {
             projectorContent.innerHTML = '';
             projectorContent.appendChild(iframe);
             
-            churchLogo.style.display = 'none';
             
             // Hide next verse preview for welcome screen
             nextVersePreview.classList.remove('visible');
@@ -134,7 +147,7 @@ function updateDisplay(content) {
             setTimeout(() => {
                 iframe.style.opacity = '1';
             }, 100);
-        }, 500);
+        }, FADE_MS);
         
         return;
     }
@@ -151,20 +164,18 @@ function updateDisplay(content) {
         setTimeout(() => {
             projectorContainer.classList.add('blank');
             projectorContent.classList.add('blank');
-            churchLogo.style.display = 'none';
             
             // Hide next verse preview for blank screen
             nextVersePreview.classList.remove('visible');
             
             // Hide song title for blank screen
             songTitleDisplay.classList.remove('visible');
-        }, 500); // Wait for fade out
+        }, FADE_MS); // Wait for fade out
         
         return;
     } else {
         projectorContainer.classList.remove('blank');
         projectorContent.classList.remove('blank');
-        churchLogo.style.display = 'block';
     }
     
     // Fade transition sequence for content changes
@@ -176,15 +187,15 @@ function updateDisplay(content) {
     setTimeout(() => {
         // Update text content
         if (content.text) {
-            // Use innerHTML to preserve line breaks
-            // Replace newlines with <br> tags for proper display
-            const formattedText = content.text.replace(/\n/g, '<br>');
-            projectorContent.innerHTML = formattedText;
+            // textContent avoids HTML injection; CSS white-space: pre-line keeps line breaks
+            projectorContent.textContent = content.text;
         }
         
-        // Update font size
+        // Update font size; clear any size left over from auto mode
         projectorContent.className = 'projector-content';
         projectorContent.classList.add(newFontClass);
+        projectorContent.style.fontSize = '';
+        projectorContent.style.lineHeight = '';
         
         // If auto font size, calculate optimal size
         if (isAutoFont) {
@@ -219,7 +230,7 @@ function updateDisplay(content) {
             projectorContent.classList.add('fade-in');
         }, 50); // Small delay before fade in
         
-    }, 500); // Duration matches fade-out transition (0.5s)
+    }, FADE_MS);
 }
 
 // Calculate and apply the optimal font size for auto mode
@@ -237,15 +248,12 @@ function calculateAutoFontSize() {
     const nextVerseHeight = nextVersePreview.classList.contains('visible') ? 
         nextVersePreview.offsetHeight + 20 : 0;
     
-    // Account for church logo
-    const logoHeight = churchLogo.style.display !== 'none' ? 100 : 0;
-    
-    // More generous padding to prevent cropping
-    const paddingHorizontal = 100; // Left and right padding combined
-    const paddingVertical = 80; // Top and bottom padding
+    const containerStyle = getComputedStyle(projectorContainer);
+    const paddingHorizontal = parseFloat(containerStyle.paddingLeft) + parseFloat(containerStyle.paddingRight);
+    const paddingVertical = parseFloat(containerStyle.paddingTop) + parseFloat(containerStyle.paddingBottom);
     
     const availableWidth = containerWidth - paddingHorizontal;
-    const availableHeight = containerHeight - songTitleHeight - nextVerseHeight - logoHeight - paddingVertical;
+    const availableHeight = containerHeight - songTitleHeight - nextVerseHeight - paddingVertical;
     
     // Start with a large font size and reduce until it fits
     let minFontSize = 20;
@@ -257,19 +265,23 @@ function calculateAutoFontSize() {
     tempElement.style.cssText = `
         position: absolute;
         visibility: hidden;
-        white-space: nowrap;
+        white-space: pre;
         display: inline-block;
         padding: 0;
         margin: 0;
     `;
-    tempElement.innerHTML = projectorContent.innerHTML;
+    const contentStyle = getComputedStyle(projectorContent);
+    tempElement.style.fontFamily = contentStyle.fontFamily;
+    tempElement.style.fontWeight = contentStyle.fontWeight;
+    tempElement.style.letterSpacing = contentStyle.letterSpacing;
+    tempElement.textContent = projectorContent.textContent;
     document.body.appendChild(tempElement);
     
     // Binary search for the optimal font size
     while (maxFontSize - minFontSize > 1) {
         const fontSize = Math.floor((minFontSize + maxFontSize) / 2);
         tempElement.style.fontSize = fontSize + 'px';
-        tempElement.style.lineHeight = '1.2';
+        tempElement.style.lineHeight = '1.25';
         
         const textWidth = tempElement.offsetWidth;
         const textHeight = tempElement.offsetHeight;
@@ -288,11 +300,19 @@ function calculateAutoFontSize() {
     
     // Apply the calculated font size with inline styles
     projectorContent.style.fontSize = bestFontSize + 'px';
-    projectorContent.style.lineHeight = '1.2';
-    
-    console.log('Auto font size:', bestFontSize, 'px', 
-                'Available space:', availableWidth, 'x', availableHeight);
+    projectorContent.style.lineHeight = '1.25';
 }
+
+// Refit auto-sized text when the window or fullscreen state changes
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+        if (projectorContent.classList.contains('font-auto')) calculateAutoFontSize();
+    }, 150);
+});
+
+document.addEventListener('dblclick', toggleFullscreen);
 
 // Allow F11 key for fullscreen
 document.addEventListener('keydown', (e) => {

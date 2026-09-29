@@ -1,4 +1,4 @@
-# Quick Reference: New Tabbed UI
+# Operator UI Quick Reference
 
 ## 📐 Layout Overview
 
@@ -222,7 +222,3 @@ Scrolling:         Per tab
 - Refresh the page
 - Clear browser cache
 
----
-
-**Version**: 3.0 - Tabbed UI
-**Date**: October 5, 2025

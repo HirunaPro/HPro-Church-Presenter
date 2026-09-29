@@ -171,6 +171,3 @@
 3. Press F12 in your browser to see console errors
 4. Make sure all files are in the correct folders
 
----
-
-**Last Updated:** October 4, 2025

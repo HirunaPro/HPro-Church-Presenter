@@ -7,19 +7,16 @@
     <meta name="theme-color" content="#3f51b5">
     <title>Operator Control - Church Presentation</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/operator.css">
 </head>
 <body>
     <div class="operator-container">
         <!-- Mobile Menu Overlay -->
         <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
         
-        <!-- Mobile Menu Toggle Button -->
-        <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
-            ☰
-        </button>
-        
         <!-- Sidebar with Song List -->
-        <div class="operator-sidebar" id="operatorSidebar">
+        <div class="operator-sidebar" id="operatorSidebar" aria-label="Song library">
+            <button class="sheet-handle" id="sheetHandle" aria-label="Close song library"></button>
             <div class="operator-header">
                 <h1>Song Library</h1>
                 <span class="connection-status disconnected" id="connectionStatus">Disconnected</span>
@@ -28,17 +25,19 @@
             <div class="search-section">
                 <div class="search-input-wrapper">
                     <input 
-                        type="text" 
+                        type="search" 
+                        autocomplete="off" 
+                        aria-label="Search songs" 
                         class="search-input" 
                         id="songSearch" 
-                        placeholder="Search songs (Singlish, Sinhala, or Tamil)..."
+                        placeholder="Search songs (Singlish, Sinhala, Tamil)…"
                     >
                     <button class="search-clear-btn" id="searchClearBtn" aria-label="Clear search">✕</button>
                 </div>
                 <button class="add-songs-btn" id="addSongsBtn">+ Add Songs</button>
             </div>
             
-            <div class="song-list" id="songList">
+            <div class="song-list" id="songList" role="listbox" aria-label="Songs">
                 <p style="text-align: center; color: #666; padding: 20px;">
                     Loading songs...
                 </p>
@@ -70,14 +69,21 @@
                     </div>
                 </div>
                 
-                <!-- Welcome Screen Quick Button -->
-                <button class="welcome-quick-btn" id="showWelcomeScreen">
-                    🎉 Welcome Screen
-                </button>
+                <div class="quick-actions">
+                    <button class="songs-quick-btn" id="openSongsBtn" aria-controls="operatorSidebar" aria-expanded="false" title="Find a song (/)">
+                        Songs <kbd>/</kbd>
+                    </button>
+                    <button class="welcome-quick-btn" id="showWelcomeScreen" title="Show welcome screen (W)">
+                        Welcome <kbd>W</kbd>
+                    </button>
+                    <button class="blank-quick-btn" id="blankQuickBtn" title="Blank the projector (B)">
+                        Blank <kbd>B</kbd>
+                    </button>
+                </div>
                 
                 <!-- Current Display Indicator -->
-                <div class="current-display-compact">
-                    <span class="display-label">Now:</span>
+                <div class="current-display-compact" aria-live="polite">
+                    <span class="live-badge">Live</span>
                     <span id="currentDisplay">Welcome to Church</span>
                 </div>
             </div>
@@ -148,11 +154,12 @@
                     </div>
                     
                     <!-- Phrases Section -->
-                    <div class="phrases-list" id="phrasesSection">
+                    <div class="phrases-list" id="phrasesSection" role="list">
                         <div class="no-song-selected">
                             <div class="empty-state-icon">🎵</div>
                             <h3>No Song Selected</h3>
-                            <p>Open the menu and select a song to view its phrases</p>
+                            <p>Tap <strong>Songs</strong> to find a song.</p>
+                            <p class="shortcut-hint"><kbd>/</kbd> search · <kbd>↑</kbd><kbd>↓</kbd> previous / next verse · <kbd>B</kbd> blank · <kbd>W</kbd> welcome</p>
                         </div>
                     </div>
                 </div>
@@ -172,6 +179,13 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Live transport (thumb-reachable on mobile) -->
+            <nav class="live-transport" aria-label="Verse navigation">
+                <button class="transport-btn" id="prevPhraseBtn" aria-label="Previous verse" disabled>‹ Prev</button>
+                <span class="transport-position" id="phrasePosition">–</span>
+                <button class="transport-btn transport-next" id="nextPhraseBtn" aria-label="Next verse" disabled>Next ›</button>
+            </nav>
         </div>
     </div>
 

@@ -63,11 +63,12 @@ docker ps
 # If you see an error, Docker is not ready yet - wait a bit longer
 ```
 
-### Step 4: Run Deployment Again
+### Step 4: Run Docker Again
 
 Once Docker is running:
 ```powershell
-.\deploy-azure-container.ps1 -AppName "mychurch-app"
+cd deployment\docker
+docker-compose up
 ```
 
 ---
@@ -268,7 +269,7 @@ if (Get-Command docker -ErrorAction SilentlyContinue) {
 2. Resources → Advanced
 3. Set:
    - CPUs: 2-4 (depending on your computer)
-   - Memory: 4GB (minimum for Azure deployments)
+   - Memory: 4GB (recommended minimum)
    - Swap: 1GB
 4. Click "Apply & Restart"
 
@@ -290,27 +291,6 @@ if (Get-Command docker -ErrorAction SilentlyContinue) {
 - BIOS-level hardware virtualization support enabled
 - WSL 2 feature enabled
 
-### Alternative Deployment Methods
-
-If Docker Desktop continues to have issues, you can:
-
-1. **Use Cloud Shell (No Docker needed):**
-   - Go to: https://shell.azure.com
-   - Upload your files
-   - Run deployment from there
-
-2. **Use GitHub Actions:**
-   - Push code to GitHub
-   - Let GitHub build and deploy for you
-
-3. **Use Azure App Service instead:**
-   ```powershell
-   # Doesn't require Docker
-   .\deploy-to-azure-v2.ps1 -AppName "mychurch-app"
-   ```
-
----
-
 ## 📞 Additional Help
 
 - **Docker Documentation:** https://docs.docker.com/desktop/windows/
@@ -319,8 +299,4 @@ If Docker Desktop continues to have issues, you can:
 
 ---
 
-**Once Docker is running, you're ready to deploy! 🚀**
-
-```powershell
-.\deploy-azure-container.ps1 -AppName "mychurch-app"
-```
+**Once Docker is running, run `docker-compose up` in `deployment/docker`.**

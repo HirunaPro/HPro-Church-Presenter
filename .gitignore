@@ -35,10 +35,6 @@ venv/
 env/
 ENV/
 
-# Azure
-.azure/
-*.publish
-
 # OS
 .DS_Store
 Thumbs.db
@@ -46,4 +42,14 @@ Thumbs.db
 # Build artifacts
 build/ChurchApp-Standalone/
 build/dist/
-*.spec
+build-dist/
+build/build-dist/
+.venv/
+
+# Native builds
+dist/
+build/native/
+build/pyinstaller/
+.venv-build/
+.scratch/
+.playwright-mcp/
